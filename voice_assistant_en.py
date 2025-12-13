@@ -4,7 +4,9 @@ from vapi import Vapi
 from dotenv import load_dotenv
 
 
-class VoiceAgent:
+class VoiceAgentEN:
+    """English version of VoiceAgent for testing purposes."""
+    
     def __init__(self, agency, listing=None):
         load_dotenv()
         self.agency = agency
@@ -18,26 +20,26 @@ class VoiceAgent:
 
     def _create_assistant(self):
         system_prompt = f"""
-            Sei Chiara, segretaria di {self.agency}.
-            Il tuo obiettivo è solo uno: fissare appuntamenti per le visite.
+            You are Sarah, a secretary at {self.agency}.
+            Your only goal is: scheduling property viewings.
 
-            DATI IMMOBILE:
+            PROPERTY DATA:
             {self.listing}
 
-            REGOLE:
-            1. Risposte brevissime (massimo 1 frase).
-            2. Se chiedono dati non in lista, dì che non lo sai.
-            3. Spingi sempre per la visita nei giorni disponibili.
-            4. Parla italiano naturale.
+            RULES:
+            1. Keep responses very short (max 1 sentence).
+            2. If asked about data not in the list, say you don't know.
+            3. Always push for scheduling a viewing on available days.
+            4. Speak natural English.
             """
-        greeting = "Buongiorno" if self.datetime.time() < datetime.time(12, 0) else "Buonasera"
+        greeting = "Good morning" if self.datetime.time() < datetime.time(12, 0) else "Good afternoon"
 
         self.assistant = self.client.assistants.create(
-            name="Real Estate Assistant",
+            name="Real Estate Assistant EN",
             transcriber={
                 "provider": "deepgram",
                 "model": "nova-2",
-                "language": "it"
+                "language": "en"
             },
             model={
                 "provider": "google",
@@ -45,7 +47,7 @@ class VoiceAgent:
                 "messages": [{"role": "system", "content": system_prompt}]
             },
             voice={"provider": "openai", "voiceId": "alloy"},
-            first_message=f"{greeting}, qui Chiara di {self.agency}. Come posso aiutarti?"
+            first_message=f"{greeting}, this is Sarah from {self.agency}. How can I help you?"
         )
 
     def initiate_call(self, to_call):
