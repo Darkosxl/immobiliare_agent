@@ -5,16 +5,20 @@ from dotenv import load_dotenv
 
 
 class VoiceAgent:
-    def __init__(self, agency, listing=None):
+    def __init__(self, agency, listing=None, assistant_id=None):
         load_dotenv()
         self.agency = agency
         self.listing = listing or []
+        self.assistant_id = assistant_id
         self.client = Vapi(token=os.getenv("VAPI_API_KEY"))
         self.datetime = datetime.datetime.now()
         self.assistant = None
 
     def start(self):
-        self._create_assistant()
+        if self.assistant_id == None:
+            self._create_assistant()
+        else:
+            self._get_assistant()
 
     def _create_assistant(self):
         system_prompt = f"""
@@ -51,8 +55,11 @@ class VoiceAgent:
     def initiate_call(self, to_call):
         response = self.client.calls.create(
             assistant_id=self.assistant.id,
-            phone_number_id=os.getenv("VAPI_US_NUMBER"),
+            phone_number_id=os.getenv("VAPI_ITA_NUMBER"),
             customer={"number": to_call}
         )
         print(f"Call initiated: {response}")
         return response
+    
+    def _get_assistant(self):
+        self.assistant = self.client.assistants.get(self.assistant_id)

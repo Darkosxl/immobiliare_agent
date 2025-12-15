@@ -6,7 +6,7 @@ load_dotenv()
 
 
 def main():
-    agent = va.VoiceAgentEN(agency="amorlabs")
+    agent = va.VoiceAgentEN(agency="amorlabs", assistant_id=os.getenv("VAPI_ASSISTANT_ID"))
     agent.start()
     agent.initiate_call(os.getenv("TEST_PHONE_NUMBER"))
 

@@ -7,16 +7,20 @@ from dotenv import load_dotenv
 class VoiceAgentEN:
     """English version of VoiceAgent for testing purposes."""
     
-    def __init__(self, agency, listing=None):
+    def __init__(self, agency, listing=None, assistant_id=None):
         load_dotenv()
         self.agency = agency
         self.listing = listing or []
         self.client = Vapi(token=os.getenv("VAPI_API_KEY"))
         self.datetime = datetime.datetime.now()
         self.assistant = None
+        self.assistant_id = assistant_id
 
     def start(self):
-        self._create_assistant()
+        if self.assistant_id == None:
+            self._create_assistant()
+        else:
+            self._get_assistant()
 
     def _create_assistant(self):
         system_prompt = f"""
@@ -35,7 +39,7 @@ class VoiceAgentEN:
         greeting = "Good morning" if self.datetime.time() < datetime.time(12, 0) else "Good afternoon"
 
         self.assistant = self.client.assistants.create(
-            name="Real Estate Assistant EN",
+            name="Nila",
             transcriber={
                 "provider": "deepgram",
                 "model": "nova-2",
@@ -53,8 +57,11 @@ class VoiceAgentEN:
     def initiate_call(self, to_call):
         response = self.client.calls.create(
             assistant_id=self.assistant.id,
-            phone_number_id=os.getenv("VAPI_US_NUMBER"),
+            phone_number_id=os.getenv("VAPI_ITA_NUMBER"),
             customer={"number": to_call}
         )
         print(f"Call initiated: {response}")
         return response
+    
+    def _get_assistant(self):
+        self.assistant = self.client.assistants.get(self.assistant_id)
