@@ -1,9 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 import os 
 import requests
 from datetime import datetime, timedelta
+import uvicorn
 
-app = FastAPI()
 
 def calendar_check_availability_tool(args):
 
@@ -55,30 +55,55 @@ def calendar_meeting_create_tool(args):
         },
     }
 
-    response = requests.post(url, json=body)
-    print(response.json()["status"])
-    return response.json()["status"]
+    response = requests.post(url, headers={"Authorization": f"Bearer {os.getenv('GOOGLE_ACCESS_TOKEN')}", "Content-Type": "application/json"}, json=body)
+    if response.status_code != 200:
+        print(f"Error creating meeting: {response.text}")
+        return f"Error: {response.text}"
+        
+    print(response.json().get("status"))
+    return response.json().get("status")
 
 def lookup_apartment_info_tool(args):
 
     return
 
 
-@app.route("/vapi/tool-call", methods=["POST"])
-def tool_call():
-    data = request.json
-    tool_calls = data["message"]["toolCalls"]
+
+app = FastAPI()
+
+@app.post("/vapi/tool-call")
+async def tool_call(request: Request):
+    data = await request.json()
+    print(f"Received payload: {data}")
+    
+    message = data.get("message", {})
+    if message.get("type") != "tool-calls":
+        print(f"Received message type: {message.get('type')}. Ignoring.")
+        return {"results": []}
+        
+    tool_calls = message.get("toolCallList", [])
+    results = []
     for tool_call in tool_calls:
         tool_name = tool_call["function"]["name"]
         args = tool_call["function"]["arguments"]
         
+        result = None
         if tool_name == "Check_google_calendar_availability":
-            calendar_check_availability_tool(args)
-
+            result = calendar_check_availability_tool(args)
         elif tool_name == "Setup_google_calendar_meeting":
-            calendar_meeting_create_tool(args)
+            result = calendar_meeting_create_tool(args)
         elif tool_name == "Lookup_apartment_info":
-            lookup_apartment_info_tool(args)
+            result = lookup_apartment_info_tool(args)
+            
+        results.append({
+            "toolCallId": tool_call["id"],
+            "result": str(result)
+        })
+        
+    return {"results": results}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 
 

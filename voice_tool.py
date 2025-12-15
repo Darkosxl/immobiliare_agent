@@ -19,7 +19,7 @@ def create_tool(name, description, parameters):
             "parameters": parameters
         },
         "server": {
-            "url": "http://localhost:8000/vapi/tool-call"
+            "url": "https://f9a17b6593f7.ngrok-free.app/vapi/tool-call"
         }
     }
     
@@ -42,7 +42,7 @@ def setup_tools():
                     "description": "The time of the meeting (ISO 8601 format preferred)"
                 }
             },
-            "required": ["caller_email", "meeting_time"]
+            "required": ["meeting_time"]
         }
     )
 
@@ -103,6 +103,8 @@ def setup_tools():
         
         payload = {
             "model": {
+                "provider": "google",
+                "model": "gemini-2.5-flash",
                 "toolIds": tool_ids
             }
         }
