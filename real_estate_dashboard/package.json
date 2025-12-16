@@ -13,6 +13,9 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.2.3",
+    "@hono/vite-dev-server": "^0.15.1",
+    "@types/bun": "^1.0.0",
+    "@types/node": "^20.11.0",
     "vite": "^6.3.5",
     "vite-ssr-components": "^0.5.1",
     "wrangler": "^4.17.0"

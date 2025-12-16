@@ -10,7 +10,8 @@
       "DOM"
     ],
     "types": [
-      "vite/client"
+      "vite/client",
+      "bun"
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"

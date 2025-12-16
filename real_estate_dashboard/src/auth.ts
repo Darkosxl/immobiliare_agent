@@ -1,9 +1,10 @@
 export const GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 export const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 
-export const SCOPES = [
-    "https://www.googleapis.com/auth/calendar",
-    "https://www.googleapis.com/auth/gmail.readonly"
+export const scopes = [
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/gmail.modify"
 ]
 
 export function getGoogleAuthURL(clientId: string, redirectUri: string): string {
@@ -11,7 +12,7 @@ export function getGoogleAuthURL(clientId: string, redirectUri: string): string 
         client_id: clientId,
         redirect_uri: redirectUri,
         response_type: "code",
-        scope: SCOPES.join(" "),
+        scope: scopes.join(" "),
         access_type: "offline",
         prompt: "consent"
     })

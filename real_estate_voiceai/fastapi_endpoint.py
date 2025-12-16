@@ -3,11 +3,24 @@ import os
 import requests
 from datetime import datetime, timedelta
 import uvicorn
+import threading
+import gmail_poller
 
+# Start Gmail Poller in background
+def start_gmail_poller():
+    print("Starting Gmail Poller Thread...")
+    while True:
+        try:
+            print(f"[{datetime.now().strftime('%X')}] Polling for emails...")
+            gmail_poller.check_emails()
+        except Exception as e:
+            print(f"Gmail Poller Error: {e}")
+        import time
+        time.sleep(60)
 
-import json
+threading.Thread(target=start_gmail_poller, daemon=True).start()
 
-def get_google_token():
+def calendar_check_availability_tool(args):
     try:
         with open("google_tokens.json", "r") as f:
             tokens = json.load(f)
@@ -221,6 +234,28 @@ def oauth2callback(code: str):
     os.environ["GOOGLE_ACCESS_TOKEN"] = token
         
     return {"status": "success", "message": "Token saved! You can close this window."}
+
+@app.post("/disconnect")
+def disconnect_google_calendar():
+    # Remove from .env
+    env_path = ".env"
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+        
+        lines = [line for line in lines if not line.startswith("GOOGLE_ACCESS_TOKEN=") and not line.startswith("GOOGLE_REFRESH_TOKEN=")]
+        
+        with open(env_path, "w") as f:
+            f.writelines(lines)
+            
+    # Remove from running process
+    if "GOOGLE_ACCESS_TOKEN" in os.environ:
+        del os.environ["GOOGLE_ACCESS_TOKEN"]
+    if "GOOGLE_REFRESH_TOKEN" in os.environ:
+        del os.environ["GOOGLE_REFRESH_TOKEN"]
+        
+    print("Google Calendar disconnected.")
+    return {"status": "success", "message": "Disconnected"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -42,13 +42,19 @@ class VoiceAgentEN:
             name="Nila",
             transcriber={
                 "provider": "deepgram",
-                "model": "nova-2",
+                "model": "nova-3",
                 "language": "en"
             },
             model={
                 "provider": "google",
                 "model": "gemini-2.5-flash",
-                "messages": [{"role": "system", "content": system_prompt}]
+                "messages": [{"role": "system", "content": system_prompt}],
+                "toolIds": [
+                    "387257ab-4fd6-4f16-84a6-c95da5abd870", # Setup_google_calendar_meeting
+                    "1928d0fd-87f6-4daf-88a2-a8b5e4b986ce", # Check_google_calendar_availability
+                    "35092526-a4e2-41e6-b8c0-3e98c14c65f7", # Lookup_apartment_info
+                    "7b30bbe8-e543-4e8f-b903-a002f1e00929"  # end_call_tool
+                ]
             },
             voice={"provider": "openai", "voiceId": "alloy"},
             first_message=f"{greeting}, this is Sarah from {self.agency}. How can I help you?"
