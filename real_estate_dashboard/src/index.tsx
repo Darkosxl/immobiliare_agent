@@ -1,10 +1,14 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 import { renderer } from './renderer'
-import type { CallLog } from './types'
+import type { CallLog, GoogleToken } from './types'
+import { getGoogleAuthURL, getGoogleTokens } from './auth'
+import { setCookie } from 'hono/cookie'
 
 type Bindings = {
   VAPI_API_KEY: string
+  GOOGLE_CLIENT_ID: string
+  GOOGLE_CLIENT_SECRET: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -13,6 +17,47 @@ app.use(renderer)
 
 app.get('/', (c) => {
   return c.render(<h1>Hello!</h1>)
+})
+
+app.get('/auth/google', (c) => {
+  const clientId = c.env.GOOGLE_CLIENT_ID
+  if (!clientId) return c.text("Missing GOOGLE_CLIENT_ID", 500)
+
+  // Assuming we are running on localhost:5173 for dev
+  const redirectUri = "http://localhost:5173/auth/google/callback"
+  const url = getGoogleAuthURL(clientId, redirectUri)
+  return c.redirect(url)
+})
+
+app.get('/auth/google/callback', async (c) => {
+  const code = c.req.query('code')
+  const clientId = c.env.GOOGLE_CLIENT_ID
+  const clientSecret = c.env.GOOGLE_CLIENT_SECRET
+
+  if (!code || !clientId || !clientSecret) {
+    return c.text("Missing code or credentials", 400)
+  }
+
+  try {
+    const redirectUri = "http://localhost:5173/auth/google/callback"
+    const tokens = await getGoogleTokens(code, clientId, clientSecret, redirectUri)
+
+    // Save tokens to shared file for Python backend
+    await Bun.write('../real_estate_voiceai/google_tokens.json', JSON.stringify(tokens, null, 2))
+
+    // In a real app, save these tokens to a database associated with the user.
+    // For this dashboard, we might just set them in a cookie or log them for now.
+    // Let's set a cookie so we can use it later.
+    setCookie(c, 'google_access_token', tokens.access_token, {
+      httpOnly: true,
+      secure: false, // dev
+      maxAge: 3600
+    })
+
+    return c.redirect('/chat_logs?connected=true')
+  } catch (e) {
+    return c.text(`Auth failed: ${e}`, 500)
+  }
 })
 
 app.get('/chat_logs', async (c) => {
@@ -33,13 +78,27 @@ app.get('/chat_logs', async (c) => {
   }
 
   const logs = await response.json() as CallLog[]
+  const isConnected = c.req.query('connected') === 'true'
 
   return c.render(
     <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <script dangerouslySetInnerHTML={{ __html: `console.log("Full Logs Data:", ${JSON.stringify(logs)})` }} />
       <div class="max-w-3xl mx-auto">
         <div class="flex items-center justify-between mb-8">
-          <h1 class="text-3xl font-bold text-gray-900">Call Logs</h1>
+          <div class="flex items-center gap-4">
+            <h1 class="text-3xl font-bold text-gray-900">Call Logs</h1>
+            {isConnected ? (
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                <svg class="mr-1.5 h-2 w-2 text-green-400" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" /></svg>
+                Google Connected
+              </span>
+            ) : (
+              <a href="/auth/google" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg class="mr-2 -ml-1 w-4 h-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path></svg>
+                Connect Google
+              </a>
+            )}
+          </div>
           <a href="/" class="text-indigo-600 hover:text-indigo-900 font-medium">Back to Home</a>
         </div>
 

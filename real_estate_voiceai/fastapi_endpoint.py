@@ -5,28 +5,58 @@ from datetime import datetime, timedelta
 import uvicorn
 
 
-def calendar_check_availability_tool(args):
+import json
 
-    
+def get_google_token():
+    try:
+        with open("google_tokens.json", "r") as f:
+            tokens = json.load(f)
+            return tokens.get("access_token")
+    except Exception as e:
+        print(f"Error reading google_tokens.json: {e}")
+        return None
+
+def calendar_check_availability_tool(args):
+    token = get_google_token()
+    if not token:
+        return "Error: Google Calendar not connected. Please connect via the Dashboard."
+
     meeting_time = args["meeting_time"]
     dt = datetime.fromisoformat(meeting_time.replace("Z", "+00:00"))
     end_time_dt = dt + timedelta(hours=0.5)
     end_time = end_time_dt.isoformat()
+    
+    # We need the calendar ID. For now, assume 'primary' or use the user's email if we had it.
+    # The original code used os.getenv("GOOGLE_CALENDAR_EMAIL"). 
+    # Let's use 'primary' which refers to the authenticated user's main calendar.
+    calendar_id = "primary"
+    
     url = "https://www.googleapis.com/calendar/v3/freeBusy"
-    json = {
+    json_body = {
         "timeMin": meeting_time,
         "timeMax": end_time,
         "items": [
             {
-            "id": os.getenv("GOOGLE_CALENDAR_EMAIL"),
+            "id": calendar_id,
             }
         ]
     }
-    response = requests.post(url, headers={"Authorization": f"Bearer {os.getenv('GOOGLE_ACCESS_TOKEN')}", "Content-Type": "application/json"}, json=json)
-    print(response.json()["calendars"][os.getenv("GOOGLE_CALENDAR_EMAIL")]["busy"])
-    return response.json()["calendars"][os.getenv("GOOGLE_CALENDAR_EMAIL")]["busy"]
+    response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=json_body)
+    
+    if response.status_code != 200:
+        return f"Error checking availability: {response.text}"
+        
+    try:
+        busy_info = response.json()["calendars"][calendar_id]["busy"]
+        return "Busy" if busy_info else "Available"
+    except KeyError:
+        return "Error parsing calendar response"
     
 def calendar_meeting_create_tool(args):
+    token = get_google_token()
+    if not token:
+        return "Error: Google Calendar not connected. Please connect via the Dashboard."
+
     email = args["caller_email"]
     meeting_time = args["meeting_time"]
     address = args["meeting_address"]
@@ -38,12 +68,11 @@ def calendar_meeting_create_tool(args):
             "timeZone": "Europe/Rome"
         },
         "end": {
-            "dateTime": meeting_time,
+            "dateTime": meeting_time, # This looks like a bug in original code (0 duration). Let's fix it.
             "timeZone": "Europe/Rome"
         },
         "attendees": [
-            {"email": email},
-            {"email": os.getenv("GOOGLE_CALENDAR_EMAIL")}
+            {"email": email}
         ],
         "description": "Meeting for apartment viewing: " + str(address),
         "reminders": {
@@ -54,14 +83,18 @@ def calendar_meeting_create_tool(args):
             ],
         },
     }
+    
+    # Fix end time to be +1 hour
+    dt = datetime.fromisoformat(meeting_time.replace("Z", "+00:00"))
+    end_dt = dt + timedelta(hours=1)
+    body["end"]["dateTime"] = end_dt.isoformat()
 
-    response = requests.post(url, headers={"Authorization": f"Bearer {os.getenv('GOOGLE_ACCESS_TOKEN')}", "Content-Type": "application/json"}, json=body)
+    response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
     if response.status_code != 200:
         print(f"Error creating meeting: {response.text}")
         return f"Error: {response.text}"
         
     print(response.json().get("status"))
-    return response.json().get("status")
 
 def lookup_apartment_info_tool(args):
 
