@@ -12,11 +12,88 @@ type Bindings = {
   VAPI_API_KEY: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
+  DASHBOARD_PASSWORD?: string
+  BACKEND_URL?: string
+  REDIRECT_URI?: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
 
 app.use(renderer)
+
+// Authentication Middleware
+app.use('*', async (c, next) => {
+  const path = c.req.path
+  // Public routes
+  if (path === '/login' || path.startsWith('/auth') || path.startsWith('/src') || path.startsWith('/@')) {
+    return next()
+  }
+
+  const token = getCookie(c, 'auth_token')
+  if (!token) {
+    return c.redirect('/login')
+  }
+
+  await next()
+})
+
+app.get('/login', (c) => {
+  return c.render(
+    <div class="min-h-screen flex items-center justify-center bg-gray-50">
+      <div class="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
+        <div class="text-center">
+          <h2 class="mt-6 text-3xl font-extrabold text-gray-900">Real Estate AI</h2>
+          <p class="mt-2 text-sm text-gray-600">Please sign in to access the dashboard</p>
+        </div>
+        <form class="mt-8 space-y-6" action="/login" method="post">
+          <div class="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label for="password" class="sr-only">Password</label>
+              <input id="password" name="password" type="password" required class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm" placeholder="Enter Password" />
+            </div>
+          </div>
+
+          <div>
+            <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+              Sign in
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+})
+
+app.post('/login', async (c) => {
+  const body = await c.req.parseBody()
+  const password = body['password']
+  const correctPassword = c.env.DASHBOARD_PASSWORD
+
+  if (correctPassword && password === correctPassword) {
+    setCookie(c, 'auth_token', 'valid', {
+      httpOnly: true,
+      path: '/',
+      maxAge: 86400 * 7, // 7 days
+    })
+    return c.redirect('/')
+  }
+
+  return c.html(
+    <div class="min-h-screen flex items-center justify-center bg-gray-50">
+      <div class="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
+        <div class="text-center">
+          <h2 class="mt-6 text-3xl font-extrabold text-red-600">Access Denied</h2>
+          <p class="mt-2 text-sm text-gray-600">Invalid password. Please try again.</p>
+        </div>
+        <div class="mt-8">
+          <a href="/login" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+            Back to Login
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+})
 
 app.get('/', (c) => {
   const isConnected = !!getCookie(c, 'google_access_token')
@@ -35,7 +112,7 @@ app.get('/auth/google', (c) => {
   if (!clientId) return c.text("Missing GOOGLE_CLIENT_ID", 500)
 
   // Assuming we are running on localhost:5173 for dev
-  const redirectUri = "http://localhost:5173/auth/google/callback"
+  const redirectUri = c.env.REDIRECT_URI || "http://localhost:5173/auth/google/callback"
   const url = getGoogleAuthURL(clientId, redirectUri)
   return c.redirect(url)
 })
@@ -50,7 +127,7 @@ app.get('/auth/google/callback', async (c) => {
   }
 
   try {
-    const redirectUri = "http://localhost:5173/auth/google/callback"
+    const redirectUri = c.env.REDIRECT_URI || "http://localhost:5173/auth/google/callback"
     const tokens = await getGoogleTokens(code, clientId, clientSecret, redirectUri)
 
     // Save tokens to shared file for Python backend
@@ -86,7 +163,8 @@ app.get('/auth/google/disconnect', async (c) => {
 
   // Call Python backend to disconnect
   try {
-    await fetch('http://localhost:8000/disconnect', { method: 'POST' })
+    const backendUrl = c.env.BACKEND_URL || 'http://localhost:8000'
+    await fetch(`${backendUrl}/disconnect`, { method: 'POST' })
   } catch (e) {
     // Ignore if backend is not running
   }
