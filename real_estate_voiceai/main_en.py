@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-import voice_assistant_en as va
+import real_estate_voiceai.voice_assistant_en as va
 
 load_dotenv()
 

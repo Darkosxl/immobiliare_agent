@@ -102,6 +102,93 @@ async def tool_call(request: Request):
         
     return {"results": results}
 
+    return {"results": results}
+
+@app.get("/connect")
+def connect_google_calendar():
+    from google_auth_oauthlib.flow import Flow
+    
+    # Create the flow using the client secrets
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+                "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=['https://www.googleapis.com/auth/calendar']
+    )
+    
+    # IMPORTANT: You must manually update this redirect_uri in your Google Console
+    # to match your current Ngrok URL + /oauth2callback
+    # Example: https://f9a17b6593f7.ngrok-free.app/oauth2callback
+    # For now, we will try to detect it from the request if possible, or hardcode it.
+    # Since we are behind ngrok, we need the public URL.
+    # Let's assume the user will set a REDIRECT_URI env var or we use a placeholder.
+    redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:8000/oauth2callback")
+    
+    flow.redirect_uri = redirect_uri
+    
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true'
+    )
+    
+    return {"url": authorization_url, "message": "Go to this URL to authorize: " + authorization_url}
+
+@app.get("/oauth2callback")
+def oauth2callback(code: str):
+    from google_auth_oauthlib.flow import Flow
+    
+    redirect_uri = os.environ.get("REDIRECT_URI", "http://localhost:8000/oauth2callback")
+
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+                "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=['https://www.googleapis.com/auth/calendar']
+    )
+    flow.redirect_uri = redirect_uri
+    
+    # Fetch the token
+    flow.fetch_token(code=code)
+    credentials = flow.credentials
+    
+    # Save to .env
+    token = credentials.token
+    refresh_token = credentials.refresh_token
+    
+    # Read current .env
+    env_path = ".env"
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+    else:
+        lines = []
+        
+    # Remove existing tokens
+    lines = [line for line in lines if not line.startswith("GOOGLE_ACCESS_TOKEN=") and not line.startswith("GOOGLE_REFRESH_TOKEN=")]
+    
+    # Append new tokens
+    lines.append(f"\nGOOGLE_ACCESS_TOKEN={token}\n")
+    if refresh_token:
+        lines.append(f"GOOGLE_REFRESH_TOKEN={refresh_token}\n")
+    
+    with open(env_path, "w") as f:
+        f.writelines(lines)
+        
+    # Update the running process environment variable so we don't need a restart
+    os.environ["GOOGLE_ACCESS_TOKEN"] = token
+        
+    return {"status": "success", "message": "Token saved! You can close this window."}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
