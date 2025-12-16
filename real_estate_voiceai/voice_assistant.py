@@ -46,7 +46,13 @@ class VoiceAgent:
             model={
                 "provider": "google",
                 "model": "gemini-2.5-flash",
-                "messages": [{"role": "system", "content": system_prompt}]
+                "messages": [{"role": "system", "content": system_prompt}],
+                "toolIds": [
+                    "050c0248-89e5-4370-a3cf-a4f0cc0b73e8", # Setup_google_calendar_meeting
+                    "1f95ff5c-6d9d-4a2a-89ee-e31f1d1dc67a", # Check_google_calendar_availability
+                    "d08ffc43-a18d-4675-83d9-abfb64e7a598", # Lookup_apartment_info
+                    "def47154-c550-41a1-805b-eebeff324110"  # end_call_tool
+                ]
             },
             voice={"provider": "openai", "voiceId": "alloy"},
             first_message=f"{greeting}, qui Chiara di {self.agency}. Come posso aiutarti?"

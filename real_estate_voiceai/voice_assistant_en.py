@@ -37,7 +37,7 @@ class VoiceAgentEN:
             4. Speak natural English.
             """
         greeting = "Good morning" if self.datetime.time() < datetime.time(12, 0) else "Good afternoon"
-
+        
         self.assistant = self.client.assistants.create(
             name="Nila",
             transcriber={
@@ -50,10 +50,10 @@ class VoiceAgentEN:
                 "model": "gemini-2.5-flash",
                 "messages": [{"role": "system", "content": system_prompt}],
                 "toolIds": [
-                    "387257ab-4fd6-4f16-84a6-c95da5abd870", # Setup_google_calendar_meeting
-                    "1928d0fd-87f6-4daf-88a2-a8b5e4b986ce", # Check_google_calendar_availability
-                    "35092526-a4e2-41e6-b8c0-3e98c14c65f7", # Lookup_apartment_info
-                    "7b30bbe8-e543-4e8f-b903-a002f1e00929"  # end_call_tool
+                    "050c0248-89e5-4370-a3cf-a4f0cc0b73e8", # Setup_google_calendar_meeting
+                    "1f95ff5c-6d9d-4a2a-89ee-e31f1d1dc67a", # Check_google_calendar_availability
+                    "d08ffc43-a18d-4675-83d9-abfb64e7a598", # Lookup_apartment_info
+                    "def47154-c550-41a1-805b-eebeff324110"  # end_call_tool
                 ]
             },
             voice={"provider": "openai", "voiceId": "alloy"},

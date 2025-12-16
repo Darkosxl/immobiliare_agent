@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 import os 
+import json
 import requests
 from datetime import datetime, timedelta
 import uvicorn
@@ -20,7 +21,7 @@ def start_gmail_poller():
 
 threading.Thread(target=start_gmail_poller, daemon=True).start()
 
-def calendar_check_availability_tool(args):
+def get_google_token():
     try:
         with open("google_tokens.json", "r") as f:
             tokens = json.load(f)

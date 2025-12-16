@@ -19,7 +19,7 @@ def create_tool(name, description, parameters):
             "parameters": parameters
         },
         "server": {
-            "url": "https://f9a17b6593f7.ngrok-free.app/vapi/tool-call"
+            "url": os.getenv("VAPI_SERVER_URL")
         }
     }
     
@@ -82,6 +82,17 @@ def setup_tools():
             },
             "required": ["address"]
         }
+
+    )
+
+    end_call_tool = create_tool(
+        name="end_call_tool",
+        description="Use this tool to end the call when the conversation is complete.",
+        parameters={
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     )
     
     # Update Assistant with these tools
@@ -98,7 +109,8 @@ def setup_tools():
         tool_ids = [
             calendar_check_availability['id'],
             calendar_meeting_create['id'],
-            lookup_apartment_info_tool['id']
+            lookup_apartment_info_tool['id'],
+            end_call_tool['id']
         ]
         
         payload = {
