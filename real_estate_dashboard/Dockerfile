@@ -20,7 +20,8 @@ WORKDIR /app/real_estate_voiceai
 # Create virtual environment
 RUN python3 -m venv venv
 
-# Copy requirements and install
+# Copy requirements and install (ARG busts cache to force fresh install)
+ARG CACHEBUST=1
 COPY real_estate_voiceai/requirements.txt .
 RUN ./venv/bin/pip install --no-cache-dir -r requirements.txt
 
