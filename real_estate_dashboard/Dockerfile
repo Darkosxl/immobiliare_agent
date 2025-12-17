@@ -41,5 +41,5 @@ COPY real_estate_dashboard/ .
 EXPOSE 5173
 EXPOSE 8000
 
-# Start dashboard only - it will spawn the backend when user clicks "Start Server"
-CMD ["bun", "run", "dev", "--host"]
+# Start dashboard in production mode
+CMD ["bun", "run", "start"]
