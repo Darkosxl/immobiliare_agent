@@ -40,7 +40,8 @@ class VoiceAgentEN:
             2. If asked about data not in the list, say you don't know.
             3. Always push for scheduling a viewing on available days.
             4. Speak natural English.
-            5. Any address given is in Milan, Italy by default. You don't need to ask for the city and the country, only the street address.
+            5. Any address given is in Milan, Italy by default. You don't need to ask for the city and the country, only the street address.'
+            6. Drive the conversation to booking a meeting for an address, the user will not be aware of your capabilites, make sure as a secretary you help them understand with short sentences.
             """
         greeting = "Good morning" if self.datetime.time() < datetime.time(12, 0) else "Good afternoon"
         
