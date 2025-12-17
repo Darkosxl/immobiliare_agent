@@ -23,9 +23,12 @@ class VoiceAgentEN:
             self._get_assistant()
 
     def _create_assistant(self):
+        today_date = self.datetime.strftime("%A, %B %d, %Y")
         system_prompt = f"""
             You are Sarah, a secretary at {self.agency}.
             Your only goal is: scheduling property viewings.
+            
+            TODAY'S DATE: {today_date}
 
             PROPERTY DATA:
             {self.listing}

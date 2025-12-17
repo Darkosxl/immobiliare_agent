@@ -21,9 +21,12 @@ class VoiceAgent:
             self._get_assistant()
 
     def _create_assistant(self):
+        today_date = self.datetime.strftime("%A, %d %B %Y")
         system_prompt = f"""
             Sei Chiara, segretaria di {self.agency}.
             Il tuo obiettivo è solo uno: fissare appuntamenti per le visite.
+            
+            DATA DI OGGI: {today_date}
 
             DATI IMMOBILE:
             {self.listing}
@@ -51,7 +54,7 @@ class VoiceAgent:
                     "050c0248-89e5-4370-a3cf-a4f0cc0b73e8", # Setup_google_calendar_meeting
                     "1f95ff5c-6d9d-4a2a-89ee-e31f1d1dc67a", # Check_google_calendar_availability
                     "d08ffc43-a18d-4675-83d9-abfb64e7a598", # Lookup_apartment_info
-                    "def47154-c550-41a1-805b-eebeff324110"  # end_call_tool
+                    "7b30bbe8-e543-4e8f-b903-a002f1e00929"  # end_call_tool (Vapi built-in)
                 ]
             },
             voice={"provider": "openai", "voiceId": "alloy"},

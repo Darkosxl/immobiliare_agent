@@ -236,13 +236,17 @@ app.post('/api/server/start', async (c) => {
   }
 
   try {
+    // Get language from query parameter (default: 'en')
+    const lang = c.req.query('lang') || 'en'
+
     // Spawn the Python process
     const basePath = getVoiceAIPath()
     const scriptPath = `${basePath}/fastapi_endpoint.py`
 
     pythonProcess = spawn('/opt/venv/bin/python', ['-u', scriptPath], {
       cwd: basePath,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, VOICE_LANG: lang }
     })
 
     // Stream stdout
@@ -408,7 +412,7 @@ app.get('/server', (c) => {
           </div>
         </div>
 
-        <div class="p-4 bg-gray-50 border-b border-gray-200 flex gap-2">
+        <div class="p-4 bg-gray-50 border-b border-gray-200 flex gap-2 items-center">
           <button id="btn-start" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium text-sm transition-colors flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             Start Server
@@ -417,6 +421,14 @@ app.get('/server', (c) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
             Stop Server
           </button>
+
+          <div class="ml-auto flex items-center gap-2">
+            <label for="language-select" class="text-sm font-medium text-gray-700">Language:</label>
+            <select id="language-select" class="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="en">🇬🇧 English</option>
+              <option value="it">🇮🇹 Italiano</option>
+            </select>
+          </div>
         </div>
 
         <div class="flex-1 bg-gray-900 p-4 overflow-auto font-mono text-xs text-green-400" id="terminal">
@@ -500,7 +512,8 @@ app.get('/server', (c) => {
 
         btnStart.onclick = async () => {
           try {
-            const res = await fetch('/api/server/start', { method: 'POST' });
+            const lang = document.getElementById('language-select').value;
+            const res = await fetch('/api/server/start?lang=' + lang, { method: 'POST' });
             if (res.ok) updateStatus(true);
             else appendLog('[ERROR] Failed to start server');
           } catch (e) {

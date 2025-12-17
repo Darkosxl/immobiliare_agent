@@ -66,12 +66,22 @@ def extract_phone_number(text):
         return None
 
 from voice_assistant_en import VoiceAgentEN
+from voice_assistant import VoiceAgent
 
 def trigger_vapi_call(phone_number):
     try:
-        print(f"Initiating call to {phone_number} using VoiceAgentEN...", flush=True)
-        # Initialize the agent (using "amorlabs" as default agency as seen in main_en.py)
-        agent = VoiceAgentEN(agency="amorlabs")
+        print(f"Initiating call to {phone_number}...", flush=True)
+        
+        # Check language from environment variable (set by dashboard)
+        lang = os.getenv("VOICE_LANG", "en")
+        
+        if lang == "it":
+            print("Using Italian voice agent (VoiceAgent)...", flush=True)
+            agent = VoiceAgent(agency="amorlabs")
+        else:
+            print("Using English voice agent (VoiceAgentEN)...", flush=True)
+            agent = VoiceAgentEN(agency="amorlabs")
+        
         agent.start()
         agent.initiate_call(phone_number)
         print("Call initiated successfully.", flush=True)
