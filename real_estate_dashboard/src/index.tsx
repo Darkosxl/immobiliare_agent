@@ -235,6 +235,11 @@ app.post('/api/server/start', async (c) => {
     return c.json({ message: 'Server already running' })
   }
 
+  // Check if Google is connected
+  if (!isGoogleConnected()) {
+    return c.json({ error: 'google_not_connected', message: 'Please connect Google Calendar first' }, 400)
+  }
+
   try {
     // Get language from query parameter (default: 'en')
     const lang = c.req.query('lang') || 'en'
@@ -443,6 +448,7 @@ app.get('/server', (c) => {
         const statusIndicator = document.getElementById('status-indicator');
         const statusText = document.getElementById('status-text');
         const terminal = document.getElementById('terminal');
+        const languageSelect = document.getElementById('language-select');
         let evtSource = null;
 
         function updateStatus(running) {
@@ -455,6 +461,10 @@ app.get('/server', (c) => {
             btnStop.disabled = false;
             btnStop.classList.remove('opacity-50', 'cursor-not-allowed');
             
+            // Lock language selector while running
+            languageSelect.disabled = true;
+            languageSelect.classList.add('opacity-50', 'cursor-not-allowed');
+            
             if (!evtSource) {
               startLogStream();
             }
@@ -466,6 +476,10 @@ app.get('/server', (c) => {
             btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
             btnStop.disabled = true;
             btnStop.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // Unlock language selector when stopped
+            languageSelect.disabled = false;
+            languageSelect.classList.remove('opacity-50', 'cursor-not-allowed');
             
             if (evtSource) {
               evtSource.close();
@@ -514,8 +528,18 @@ app.get('/server', (c) => {
           try {
             const lang = document.getElementById('language-select').value;
             const res = await fetch('/api/server/start?lang=' + lang, { method: 'POST' });
-            if (res.ok) updateStatus(true);
-            else appendLog('[ERROR] Failed to start server');
+            const data = await res.json();
+            
+            if (res.ok) {
+              updateStatus(true);
+            } else if (data.error === 'google_not_connected') {
+              appendLog('[ERROR] Google Calendar not connected!');
+              if (confirm('You need to connect Google Calendar first. Would you like to connect now?')) {
+                window.location.href = '/auth/google';
+              }
+            } else {
+              appendLog('[ERROR] Failed to start server: ' + (data.message || data.error));
+            }
           } catch (e) {
             appendLog('[ERROR] ' + e);
           }
