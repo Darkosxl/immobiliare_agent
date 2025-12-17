@@ -43,7 +43,7 @@ app.use('*', async (c, next) => {
   // Vapi tool calls - check for secret header
   if (path.startsWith('/vapi')) {
     const vapiSecret = c.req.header('x-vapi-secret')
-    if (vapiSecret === c.env.VAPI_WEBHOOK_SECRET) {
+    if (vapiSecret === process.env.VAPI_WEBHOOK_SECRET) {
       return next()
     }
     return c.json({ error: 'Unauthorized' }, 401)
