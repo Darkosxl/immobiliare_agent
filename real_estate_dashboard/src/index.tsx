@@ -198,6 +198,28 @@ function addToLogs(data: string) {
   }
 }
 
+// Proxy Vapi tool calls to the Python backend
+app.post('/vapi/tool-call', async (c) => {
+  try {
+    const body = await c.req.json()
+    addToLogs(`[PROXY] Received tool call from Vapi: ${JSON.stringify(body).slice(0, 200)}...`)
+
+    const response = await fetch('http://localhost:8000/vapi/tool-call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+
+    const result = await response.json()
+    addToLogs(`[PROXY] Tool call response: ${JSON.stringify(result).slice(0, 200)}...`)
+
+    return c.json(result)
+  } catch (e) {
+    addToLogs(`[PROXY] Error forwarding tool call: ${e}`)
+    return c.json({ error: String(e) }, 500)
+  }
+})
+
 app.post('/api/server/start', async (c) => {
   if (pythonProcess) {
     return c.json({ message: 'Server already running' })
