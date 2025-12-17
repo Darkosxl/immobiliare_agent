@@ -36,7 +36,8 @@ def get_google_creds():
         print(f"Error reading google_tokens.json: {e}", flush=True)
         return None
 
-def extract_phone_number(text):
+def extract_contact_info(text):
+    """Extract phone number AND name from email text using LLM."""
     if not OPENROUTER_API_KEY:
         print("OPENROUTER_API_KEY not set", flush=True)
         return None
@@ -48,7 +49,12 @@ def extract_phone_number(text):
     data = {
         "model": "openai/gpt-5.2",
         "messages": [
-            {"role": "system", "content": "You are a data extraction tool. Extract the phone number from the text. Return ONLY the phone number in E.164 format (e.g., +1234567890). If no number is found, return 'NONE'."},
+            {"role": "system", "content": """You are a data extraction tool. Extract the phone number AND the person's name from the text.
+Return ONLY valid JSON in this exact format: {"phone": "+1234567890", "name": "John Doe"}
+- Phone must be in E.164 format (e.g., +1234567890)
+- If phone not found, use null for phone
+- If name not found, use "Customer" as default
+Return ONLY the JSON, no explanation."""},
             {"role": "user", "content": text}
         ]
     }
@@ -57,7 +63,8 @@ def extract_phone_number(text):
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
         if response.status_code == 200:
             result = response.json()['choices'][0]['message']['content'].strip()
-            return None if result == 'NONE' else result
+            import json as json_lib
+            return json_lib.loads(result)
         else:
             print(f"OpenRouter Error: {response.text}", flush=True)
             return None
@@ -68,19 +75,19 @@ def extract_phone_number(text):
 from voice_assistant_en import VoiceAgentEN
 from voice_assistant import VoiceAgent
 
-def trigger_vapi_call(phone_number):
+def trigger_vapi_call(phone_number, caller_name="Customer"):
     try:
-        print(f"Initiating call to {phone_number}...", flush=True)
+        print(f"Initiating call to {phone_number} (caller: {caller_name})...", flush=True)
         
         # Check language from environment variable (set by dashboard)
         lang = os.getenv("VOICE_LANG", "en")
         
         if lang == "it":
             print("Using Italian voice agent (VoiceAgent)...", flush=True)
-            agent = VoiceAgent(agency="amorlabs")
+            agent = VoiceAgent(agency="amorlabs", caller_name=caller_name)
         else:
             print("Using English voice agent (VoiceAgentEN)...", flush=True)
-            agent = VoiceAgentEN(agency="amorlabs")
+            agent = VoiceAgentEN(agency="amorlabs", caller_name=caller_name)
         
         agent.start()
         agent.initiate_call(phone_number)
@@ -132,12 +139,14 @@ def check_emails():
 
             print(f"Processing email from {TARGET_SENDER}...", flush=True)
 
-            # Extract Phone Number
-            phone_number = extract_phone_number(body)
+            # Extract contact info (phone and name)
+            contact_info = extract_contact_info(body)
 
-            if phone_number:
-                print(f"Found phone number: {phone_number}. Initiating call...", flush=True)
-                trigger_vapi_call(phone_number)
+            if contact_info and contact_info.get("phone"):
+                phone = contact_info["phone"]
+                name = contact_info.get("name", "Customer")
+                print(f"Found: {name} - {phone}. Initiating call...", flush=True)
+                trigger_vapi_call(phone, caller_name=name)
             else:
                 print("No phone number found in email.", flush=True)
 

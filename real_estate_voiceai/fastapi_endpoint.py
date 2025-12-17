@@ -75,7 +75,7 @@ def calendar_meeting_create_tool(args):
     if not token:
         return "Error: Google Calendar not connected. Please connect via the Dashboard."
 
-    email = args["caller_email"]
+    caller_name = args.get("caller_name", "Customer")
     meeting_time = args["meeting_time"]
     address = args["meeting_address"]
     
@@ -88,7 +88,7 @@ def calendar_meeting_create_tool(args):
 
     url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
     body = {
-        "summary": f"Property Viewing: {address}",
+        "summary": f"Property Viewing with {caller_name}: {address}",
         "start": {
             "dateTime": dt.isoformat(),
             "timeZone": "Europe/Rome"
@@ -97,10 +97,7 @@ def calendar_meeting_create_tool(args):
             "dateTime": end_dt.isoformat(),
             "timeZone": "Europe/Rome"
         },
-        "attendees": [
-            {"email": email}
-        ],
-        "description": "Meeting for apartment viewing: " + str(address),
+        "description": f"Property viewing appointment with {caller_name} at {address}",
         "reminders": {
             "useDefault": False,
             "overrides": [

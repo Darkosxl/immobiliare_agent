@@ -48,13 +48,13 @@ def setup_tools():
 
     calendar_meeting_create = create_tool(
         name="Setup_google_calendar_meeting",
-        description="Use this tool to schedule a confirmed meeting in the calendar. REQUIRES: caller's email, meeting time, and the property address.",
+        description="Use this tool to schedule a confirmed property viewing in the calendar. REQUIRES: meeting time and property address. Optionally include the caller's name.",
         parameters={
             "type": "object",
             "properties": {
-                "caller_email": {
+                "caller_name": {
                     "type": "string",
-                    "description": "The email of the caller"
+                    "description": "The name of the person to meet (optional)"
                 },
                 "meeting_time": {
                     "type": "string",
@@ -65,7 +65,7 @@ def setup_tools():
                     "description": "The address of the apartment"
                 }
             },
-            "required": ["caller_email", "meeting_time", "meeting_address"]
+            "required": ["meeting_time", "meeting_address"]
         }
     )
 
