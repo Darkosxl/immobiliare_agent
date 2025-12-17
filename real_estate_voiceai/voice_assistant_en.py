@@ -11,7 +11,7 @@ class VoiceAgentEN:
         load_dotenv()
         self.agency = agency
         self.listing = listing or []
-        self.client = Vapi(token=os.getenv("VAPI_API_KEY"))
+        self.client = Vapi(api_key=os.getenv("VAPI_API_KEY"))
         self.datetime = datetime.datetime.now()
         self.assistant = None
         self.assistant_id = assistant_id
