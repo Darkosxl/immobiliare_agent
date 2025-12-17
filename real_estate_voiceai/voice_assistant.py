@@ -1,6 +1,6 @@
 import os
 import datetime
-from vapi import Vapi
+from vapi_python import Vapi
 from dotenv import load_dotenv
 
 
