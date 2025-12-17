@@ -537,8 +537,9 @@ app.get('/chat_logs', async (c) => {
             <div class="border-t border-gray-100 bg-gray-50/50 p-6">
               <div class="space-y-6">
                 {log.artifact?.messages?.map((msg: any, index: number) => {
-                  // Skip the first message if it's the system prompt
-                  if (index === 0 && msg.role === 'assistant') return null
+                  // Skip the system prompt - it's always the first message and/or has role 'system'
+                  if (msg.role === 'system') return null
+                  if (index === 0) return null
 
                   const content = msg.message || msg.content
                   const hasContent = !!content
