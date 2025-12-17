@@ -46,7 +46,7 @@ class VoiceAgent:
             name="Real Estate Assistant",
             transcriber={
                 "provider": "deepgram",
-                "model": "nova-2",
+                "model": "nova-3",
                 "language": "it"
             },
             model={
