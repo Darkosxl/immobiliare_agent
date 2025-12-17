@@ -13,6 +13,11 @@ function getVoiceAIPath(): string {
   return existsSync('/app/real_estate_voiceai') ? '/app/real_estate_voiceai' : '../real_estate_voiceai'
 }
 
+// Check if Google is actually connected (token file exists)
+function isGoogleConnected(): boolean {
+  return existsSync(`${getVoiceAIPath()}/google_tokens.json`)
+}
+
 type Bindings = {
   VAPI_API_KEY: string
   GOOGLE_CLIENT_ID: string
@@ -101,7 +106,7 @@ app.post('/login', async (c) => {
 })
 
 app.get('/', (c) => {
-  const isConnected = !!getCookie(c, 'google_access_token')
+  const isConnected = isGoogleConnected()
   return c.render(
     <DashboardLayout activeTab="home" isConnected={isConnected}>
       <div class="flex flex-col items-center justify-center h-full text-gray-500">
@@ -277,6 +282,10 @@ app.get('/api/server/status', (c) => {
 })
 
 app.get('/api/server/logs', (c) => {
+  // Disable proxy buffering for real-time SSE
+  c.header('X-Accel-Buffering', 'no')
+  c.header('Cache-Control', 'no-cache')
+
   return streamSSE(c, async (stream) => {
     // Send initial logs
     for (const log of logBuffer) {
@@ -351,7 +360,7 @@ const DashboardLayout = (props: { children: any, activeTab: 'logs' | 'server' | 
 }
 
 app.get('/server', (c) => {
-  const isConnected = c.req.query('connected') === 'true' || !!getCookie(c, 'google_access_token')
+  const isConnected = isGoogleConnected()
 
   return c.render(
     <DashboardLayout activeTab="server" isConnected={isConnected}>
@@ -434,9 +443,19 @@ app.get('/server', (c) => {
             appendLog(event.data);
           };
           evtSource.onerror = function() {
-            console.log("SSE Error");
+            console.log("SSE Error - reconnecting in 2s...");
             evtSource.close();
             evtSource = null;
+            // Auto-reconnect after 2 seconds if server is still running
+            setTimeout(() => {
+              fetch('/api/server/status')
+                .then(res => res.json())
+                .then(data => {
+                  if (data.running && !evtSource) {
+                    startLogStream();
+                  }
+                });
+            }, 2000);
           };
         }
 
@@ -486,7 +505,7 @@ app.get('/chat_logs', async (c) => {
   }
 
   const logs = await response.json() as CallLog[]
-  const isConnected = c.req.query('connected') === 'true' || !!getCookie(c, 'google_access_token')
+  const isConnected = isGoogleConnected()
 
   return c.render(
     <DashboardLayout activeTab="logs" isConnected={isConnected}>
