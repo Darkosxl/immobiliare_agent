@@ -67,7 +67,10 @@ class VoiceAgentEN:
         response = self.client.calls.create(
             assistant_id=self.assistant.id,
             phone_number_id=os.getenv("VAPI_ITA_NUMBER"),
-            customer={"number": to_call}
+            customer={"number": to_call},
+            phone_call_provider={
+                "timeout_seconds": 60  # Wait up to 60 seconds for answer detection
+            }
         )
         print(f"Call initiated: {response}", flush=True)
         return response
