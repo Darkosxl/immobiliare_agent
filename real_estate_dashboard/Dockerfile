@@ -15,15 +15,17 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # --- Setup Backend (VoiceAI) ---
-WORKDIR /app/real_estate_voiceai
-
-# Create virtual environment
-RUN python3 -m venv venv
+# Create virtual environment OUTSIDE /app so volume mounts don't hide it
+RUN python3 -m venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy requirements and install (ARG busts cache to force fresh install)
 ARG CACHEBUST=1
-COPY real_estate_voiceai/requirements.txt .
-RUN ./venv/bin/pip install --no-cache-dir -r requirements.txt
+COPY real_estate_voiceai/requirements.txt /tmp/requirements.txt
+RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+
+WORKDIR /app/real_estate_voiceai
 
 # Copy backend code
 COPY real_estate_voiceai/ .
