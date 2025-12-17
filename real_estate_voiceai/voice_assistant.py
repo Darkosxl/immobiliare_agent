@@ -58,17 +58,20 @@ class VoiceAgent:
                 ]
             },
             voice={"provider": "openai", "voiceId": "alloy"},
-            first_message=f"{greeting}, qui Chiara di {self.agency}. Come posso aiutarti?"
+            first_message=f"{greeting}, qui Chiara di {self.agency}. Come posso aiutarti?",
+            voicemail_detection={
+                "provider": "twilio",
+                "enabled": True,
+                "machineDetectionTimeout": 45,
+                "machineDetectionSilenceTimeout": 10000
+            }
         )
 
     def initiate_call(self, to_call):
         response = self.client.calls.create(
             assistant_id=self.assistant.id,
             phone_number_id=os.getenv("VAPI_ITA_NUMBER"),
-            customer={"number": to_call},
-            phone_call_provider={
-                "timeout_seconds": 60  # Wait up to 60 seconds for answer detection
-            }
+            customer={"number": to_call}
         )
         print(f"Call initiated: {response}")
         return response
