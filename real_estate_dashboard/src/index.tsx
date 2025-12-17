@@ -25,6 +25,7 @@ type Bindings = {
   DASHBOARD_PASSWORD?: string
   BACKEND_URL?: string
   REDIRECT_URI?: string
+  VAPI_WEBHOOK_SECRET?: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -37,6 +38,15 @@ app.use('*', async (c, next) => {
   // Public routes
   if (path === '/login' || path.startsWith('/auth') || path.startsWith('/src') || path.startsWith('/@')) {
     return next()
+  }
+
+  // Vapi tool calls - check for secret header
+  if (path.startsWith('/vapi')) {
+    const vapiSecret = c.req.header('x-vapi-secret')
+    if (vapiSecret === c.env.VAPI_WEBHOOK_SECRET) {
+      return next()
+    }
+    return c.json({ error: 'Unauthorized' }, 401)
   }
 
   const token = getCookie(c, 'auth_token')
