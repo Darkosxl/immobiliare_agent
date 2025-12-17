@@ -202,18 +202,10 @@ app.post('/api/server/start', async (c) => {
     // Spawn the Python process
     const basePath = getVoiceAIPath()
     const scriptPath = `${basePath}/fastapi_endpoint.py`
-    // Use /opt/venv in Docker (won't be hidden by volume mounts), fallback to local venv
-    const pythonPath = existsSync('/opt/venv/bin/python') ? '/opt/venv/bin/python' : `${basePath}/venv/bin/python`
 
-    pythonProcess = spawn(pythonPath, ['-u', scriptPath], {
+    pythonProcess = spawn('/opt/venv/bin/python', ['-u', scriptPath], {
       cwd: basePath,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        VIRTUAL_ENV: existsSync('/opt/venv') ? '/opt/venv' : `${basePath}/venv`,
-        PATH: `${existsSync('/opt/venv') ? '/opt/venv/bin' : `${basePath}/venv/bin`}:${process.env.PATH}`,
-        PYTHONUNBUFFERED: '1',
-      },
+      stdio: ['ignore', 'pipe', 'pipe']
     })
 
     // Stream stdout
