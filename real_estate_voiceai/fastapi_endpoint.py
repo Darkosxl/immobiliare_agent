@@ -37,19 +37,22 @@ def calendar_check_availability_tool(args):
         return "Error: Google Calendar not connected. Please connect via the Dashboard."
 
     meeting_time = args["meeting_time"]
+    
+    # Ensure timezone is present (Google Calendar API requires RFC3339 with timezone)
+    if "Z" not in meeting_time and "+" not in meeting_time and "-" not in meeting_time[10:]:
+        meeting_time = meeting_time + "+01:00"  # Default to Europe/Rome
+    
     dt = datetime.fromisoformat(meeting_time.replace("Z", "+00:00"))
     end_time_dt = dt + timedelta(hours=0.5)
-    end_time = end_time_dt.isoformat()
+    time_min = dt.isoformat()
+    time_max = end_time_dt.isoformat()
     
-    # We need the calendar ID. For now, assume 'primary' or use the user's email if we had it.
-    # The original code used os.getenv("GOOGLE_CALENDAR_EMAIL"). 
-    # Let's use 'primary' which refers to the authenticated user's main calendar.
     calendar_id = "primary"
     
     url = "https://www.googleapis.com/calendar/v3/freeBusy"
     json_body = {
-        "timeMin": meeting_time,
-        "timeMax": end_time,
+        "timeMin": time_min,
+        "timeMax": time_max,
         "items": [
             {
             "id": calendar_id,
@@ -75,15 +78,23 @@ def calendar_meeting_create_tool(args):
     email = args["caller_email"]
     meeting_time = args["meeting_time"]
     address = args["meeting_address"]
+    
+    # Ensure timezone is present
+    if "Z" not in meeting_time and "+" not in meeting_time and "-" not in meeting_time[10:]:
+        meeting_time = meeting_time + "+01:00"  # Default to Europe/Rome
+    
+    dt = datetime.fromisoformat(meeting_time.replace("Z", "+00:00"))
+    end_dt = dt + timedelta(hours=1)
 
     url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
     body = {
+        "summary": f"Property Viewing: {address}",
         "start": {
-            "dateTime": meeting_time,
+            "dateTime": dt.isoformat(),
             "timeZone": "Europe/Rome"
         },
         "end": {
-            "dateTime": meeting_time, # This looks like a bug in original code (0 duration). Let's fix it.
+            "dateTime": end_dt.isoformat(),
             "timeZone": "Europe/Rome"
         },
         "attendees": [
@@ -98,22 +109,18 @@ def calendar_meeting_create_tool(args):
             ],
         },
     }
-    
-    # Fix end time to be +1 hour
-    dt = datetime.fromisoformat(meeting_time.replace("Z", "+00:00"))
-    end_dt = dt + timedelta(hours=1)
-    body["end"]["dateTime"] = end_dt.isoformat()
 
     response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
     if response.status_code != 200:
         print(f"Error creating meeting: {response.text}", flush=True)
         return f"Error: {response.text}"
         
-    print(response.json().get("status"), flush=True)
+    print(f"Meeting created: {response.json().get('status')}", flush=True)
+    return f"Meeting scheduled successfully for {dt.strftime('%B %d at %H:%M')}"
 
 def lookup_apartment_info_tool(args):
-
-    return
+    #TODO
+    return "Success!"
 
 
 
