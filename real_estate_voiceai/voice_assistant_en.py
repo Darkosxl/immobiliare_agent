@@ -66,7 +66,7 @@ class VoiceAgentEN:
             phone_number_id=os.getenv("VAPI_ITA_NUMBER"),
             customer={"number": to_call}
         )
-        print(f"Call initiated: {response}")
+        print(f"Call initiated: {response}", flush=True)
         return response
     
     def _get_assistant(self):

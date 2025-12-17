@@ -13,9 +13,9 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 # Configuration
 TARGET_SENDER = os.getenv("GOOGLE_CALENDAR_EMAIL")
 if not TARGET_SENDER:
-    print("WARNING: GOOGLE_CALENDAR_EMAIL not set in .env. Polling will likely fail to find specific emails.")
+    print("WARNING: GOOGLE_CALENDAR_EMAIL not set in .env. Polling will likely fail to find specific emails.", flush=True)
 else:
-    print(f"Polling for emails from: {TARGET_SENDER}")
+    print(f"Polling for emails from: {TARGET_SENDER}", flush=True)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 VAPI_ITA_NUMBER = os.getenv("VAPI_ITA_NUMBER")
 VAPI_API_KEY = os.getenv("VAPI_API_KEY")
@@ -33,12 +33,12 @@ def get_google_creds():
                 client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
             )
     except Exception as e:
-        print(f"Error reading google_tokens.json: {e}")
+        print(f"Error reading google_tokens.json: {e}", flush=True)
         return None
 
 def extract_phone_number(text):
     if not OPENROUTER_API_KEY:
-        print("OPENROUTER_API_KEY not set")
+        print("OPENROUTER_API_KEY not set", flush=True)
         return None
 
     headers = {
@@ -59,54 +59,54 @@ def extract_phone_number(text):
             result = response.json()['choices'][0]['message']['content'].strip()
             return None if result == 'NONE' else result
         else:
-            print(f"OpenRouter Error: {response.text}")
+            print(f"OpenRouter Error: {response.text}", flush=True)
             return None
     except Exception as e:
-        print(f"Error calling OpenRouter: {e}")
+        print(f"Error calling OpenRouter: {e}", flush=True)
         return None
 
 from voice_assistant_en import VoiceAgentEN
 
 def trigger_vapi_call(phone_number):
     try:
-        print(f"Initiating call to {phone_number} using VoiceAgentEN...")
+        print(f"Initiating call to {phone_number} using VoiceAgentEN...", flush=True)
         # Initialize the agent (using "amorlabs" as default agency as seen in main_en.py)
         agent = VoiceAgentEN(agency="amorlabs")
         agent.start()
         agent.initiate_call(phone_number)
-        print("Call initiated successfully.")
+        print("Call initiated successfully.", flush=True)
     except Exception as e:
-        print(f"Error triggering Vapi call: {e}")
+        print(f"Error triggering Vapi call: {e}", flush=True)
 
 def check_emails():
     creds = get_google_creds()
     if not creds:
-        print("No Google credentials found.")
+        print("No Google credentials found.", flush=True)
         return
 
     try:
         service = build('gmail', 'v1', credentials=creds)
-        
+
         # Query for unread emails from the target sender
         if TARGET_SENDER:
             query = f"from:{TARGET_SENDER} is:unread"
         else:
             # Fallback: check all unread emails if no sender specified (for testing)
-            print("No TARGET_SENDER configured. Checking ALL unread emails.")
+            print("No TARGET_SENDER configured. Checking ALL unread emails.", flush=True)
             query = "is:unread"
-            
-        print(f"Executing Gmail query: '{query}'")
+
+        print(f"Executing Gmail query: '{query}'", flush=True)
         results = service.users().messages().list(userId='me', q=query).execute()
         messages = results.get('messages', [])
 
         if not messages:
-            print("No new messages.")
+            print("No new messages.", flush=True)
             return
 
         for msg in messages:
             msg_id = msg['id']
             message = service.users().messages().get(userId='me', id=msg_id).execute()
-            
+
             # Get body
             payload = message['payload']
             body = ""
@@ -120,22 +120,22 @@ def check_emails():
                 data = payload['body']['data']
                 body = base64.urlsafe_b64decode(data).decode()
 
-            print(f"Processing email from {TARGET_SENDER}...")
-            
+            print(f"Processing email from {TARGET_SENDER}...", flush=True)
+
             # Extract Phone Number
             phone_number = extract_phone_number(body)
-            
+
             if phone_number:
-                print(f"Found phone number: {phone_number}. Initiating call...")
+                print(f"Found phone number: {phone_number}. Initiating call...", flush=True)
                 trigger_vapi_call(phone_number)
             else:
-                print("No phone number found in email.")
+                print("No phone number found in email.", flush=True)
 
             # Mark as read
             service.users().messages().modify(userId='me', id=msg_id, body={'removeLabelIds': ['UNREAD']}).execute()
 
     except Exception as e:
-        print(f"Error checking emails: {e}")
+        print(f"Error checking emails: {e}", flush=True)
 
 if __name__ == "__main__":
     print("Starting Gmail Poller...")

@@ -10,13 +10,13 @@ import gmail_poller
 
 # Start Gmail Poller in background
 def start_gmail_poller():
-    print("Starting Gmail Poller Thread...")
+    print("Starting Gmail Poller Thread...", flush=True)
     while True:
         try:
-            print(f"[{datetime.now().strftime('%X')}] Polling for emails...")
+            print(f"[{datetime.now().strftime('%X')}] Polling for emails...", flush=True)
             gmail_poller.check_emails()
         except Exception as e:
-            print(f"Gmail Poller Error: {e}")
+            print(f"Gmail Poller Error: {e}", flush=True)
         import time
         time.sleep(60)
 
@@ -28,7 +28,7 @@ def get_google_token():
             tokens = json.load(f)
             return tokens.get("access_token")
     except Exception as e:
-        print(f"Error reading google_tokens.json: {e}")
+        print(f"Error reading google_tokens.json: {e}", flush=True)
         return None
 
 def calendar_check_availability_tool(args):
@@ -106,10 +106,10 @@ def calendar_meeting_create_tool(args):
 
     response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
     if response.status_code != 200:
-        print(f"Error creating meeting: {response.text}")
+        print(f"Error creating meeting: {response.text}", flush=True)
         return f"Error: {response.text}"
         
-    print(response.json().get("status"))
+    print(response.json().get("status"), flush=True)
 
 def lookup_apartment_info_tool(args):
 
@@ -122,11 +122,11 @@ app = FastAPI()
 @app.post("/vapi/tool-call")
 async def tool_call(request: Request):
     data = await request.json()
-    print(f"Received payload: {data}")
+    print(f"Received payload: {data}", flush=True)
     
     message = data.get("message", {})
     if message.get("type") != "tool-calls":
-        print(f"Received message type: {message.get('type')}. Ignoring.")
+        print(f"Received message type: {message.get('type')}. Ignoring.", flush=True)
         return {"results": []}
         
     tool_calls = message.get("toolCallList", [])
@@ -256,7 +256,7 @@ def disconnect_google_calendar():
     if "GOOGLE_REFRESH_TOKEN" in os.environ:
         del os.environ["GOOGLE_REFRESH_TOKEN"]
         
-    print("Google Calendar disconnected.")
+    print("Google Calendar disconnected.", flush=True)
     return {"status": "success", "message": "Disconnected"}
 
 if __name__ == "__main__":
