@@ -437,10 +437,17 @@ app.get('/server', (c) => {
           terminal.scrollTop = terminal.scrollHeight;
         }
 
+        let seenLogs = new Set();
+
         function startLogStream() {
           evtSource = new EventSource("/api/server/logs");
           evtSource.onmessage = function(event) {
-            appendLog(event.data);
+            // Skip duplicate logs on reconnect
+            const logKey = event.data;
+            if (!seenLogs.has(logKey)) {
+              seenLogs.add(logKey);
+              appendLog(event.data);
+            }
           };
           evtSource.onerror = function() {
             console.log("SSE Error - reconnecting in 2s...");

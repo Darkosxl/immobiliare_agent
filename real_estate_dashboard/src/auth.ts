@@ -4,7 +4,8 @@ export const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 export const scopes = [
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
-    "https://www.googleapis.com/auth/gmail.modify"
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/calendar"
 ]
 
 export function getGoogleAuthURL(clientId: string, redirectUri: string): string {
