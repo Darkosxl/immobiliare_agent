@@ -1,6 +1,6 @@
 import os
 import datetime
-from vapi_python import Vapi
+from vapi import Vapi
 from dotenv import load_dotenv
 
 
@@ -10,7 +10,7 @@ class VoiceAgent:
         self.agency = agency
         self.listing = listing or []
         self.assistant_id = assistant_id
-        self.client = Vapi(api_key=os.getenv("VAPI_API_KEY"))
+        self.client = Vapi(token=os.getenv("VAPI_API_KEY"))
         self.datetime = datetime.datetime.now()
         self.assistant = None
 
