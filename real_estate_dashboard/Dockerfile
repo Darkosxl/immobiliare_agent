@@ -1,10 +1,12 @@
+# NOTE: Run this build from the REPO ROOT: docker build -f real_estate_dashboard/Dockerfile .
 FROM oven/bun:1
 
-# Install Python and system dependencies
+# Install Python, Git, and system dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
+    git \
     gcc \
     portaudio19-dev \
     python3-dev \
@@ -23,7 +25,7 @@ COPY real_estate_voiceai/requirements.txt .
 RUN ./venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
-COPY real_estate_voiceai .
+COPY real_estate_voiceai/ .
 
 # --- Setup Frontend (Dashboard) ---
 WORKDIR /app/real_estate_dashboard
@@ -33,15 +35,11 @@ COPY real_estate_dashboard/package.json real_estate_dashboard/bun.lock ./
 RUN bun install
 
 # Copy frontend code
-COPY real_estate_dashboard .
-
-# Copy startup script
-COPY real_estate_dashboard/start.sh .
-RUN chmod +x start.sh
+COPY real_estate_dashboard/ .
 
 # Expose ports for both services
 EXPOSE 5173
 EXPOSE 8000
 
-# Run the startup script
-CMD ["./start.sh"]
+# Start dashboard only - it will spawn the backend when user clicks "Start Server"
+CMD ["bun", "run", "dev", "--host"]

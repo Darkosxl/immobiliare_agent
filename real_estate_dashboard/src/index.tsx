@@ -4,9 +4,14 @@ import { renderer } from './renderer'
 import type { CallLog, GoogleToken } from './types'
 import { getGoogleAuthURL, getGoogleTokens } from './auth'
 import { setCookie, getCookie } from 'hono/cookie'
-import { promises as fs } from 'fs'
+import { promises as fs, existsSync } from 'fs'
 import { spawn } from 'child_process'
 import { streamSSE } from 'hono/streaming'
+
+// Helper to get the correct base path for voiceai directory
+function getVoiceAIPath(): string {
+  return existsSync('/app/real_estate_voiceai') ? '/app/real_estate_voiceai' : '../real_estate_voiceai'
+}
 
 type Bindings = {
   VAPI_API_KEY: string
@@ -131,7 +136,7 @@ app.get('/auth/google/callback', async (c) => {
     const tokens = await getGoogleTokens(code, clientId, clientSecret, redirectUri)
 
     // Save tokens to shared file for Python backend
-    await fs.writeFile('../real_estate_voiceai/google_tokens.json', JSON.stringify(tokens, null, 2))
+    await fs.writeFile(`${getVoiceAIPath()}/google_tokens.json`, JSON.stringify(tokens, null, 2))
 
     // In a real app, save these tokens to a database associated with the user.
     // For this dashboard, we might just set them in a cookie or log them for now.
@@ -156,7 +161,7 @@ app.get('/auth/google/disconnect', async (c) => {
 
   // Delete tokens file
   try {
-    await fs.unlink('../real_estate_voiceai/google_tokens.json')
+    await fs.unlink(`${getVoiceAIPath()}/google_tokens.json`)
   } catch (e) {
     // Ignore if file doesn't exist
   }
@@ -195,11 +200,12 @@ app.post('/api/server/start', async (c) => {
 
   try {
     // Spawn the Python process
-    const scriptPath = '../real_estate_voiceai/fastapi_endpoint.py'
-    const pythonPath = '../real_estate_voiceai/venv/bin/python'
+    const basePath = getVoiceAIPath()
+    const scriptPath = `${basePath}/fastapi_endpoint.py`
+    const pythonPath = `${basePath}/venv/bin/python`
 
     pythonProcess = spawn(pythonPath, ['-u', scriptPath], {
-      cwd: '../real_estate_voiceai', // Run in the correct directory
+      cwd: basePath,
       stdio: ['ignore', 'pipe', 'pipe']
     })
 

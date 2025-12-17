@@ -1,3 +1,4 @@
+# NOTE: Run this build from the REPO ROOT: docker build -f real_estate_voiceai/Dockerfile .
 # Stage 1: Build Dashboard
 FROM oven/bun:1 as frontend-builder
 WORKDIR /app/dashboard
