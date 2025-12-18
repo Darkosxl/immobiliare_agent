@@ -50,8 +50,8 @@ class VoiceAgent:
                 "language": "it"
             },
             model={
-                "provider": "google",
-                "model": "gemini-2.5-flash",
+                "provider": "openrouter",
+                "model": "google/gemini-3-flash-preview",
                 "messages": [{"role": "system", "content": system_prompt}],
                 "toolIds": [
                     "47060d68-075e-425e-8b8c-4fe08cd8fde7", # Check_google_calendar_availability
