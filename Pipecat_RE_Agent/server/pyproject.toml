@@ -1,0 +1,22 @@
+[project]
+name = "Pipecat_RE_Agent"
+version = "0.1.0"
+description = "Voice AI bot built with Pipecat"
+requires-python = ">=3.10"
+dependencies = [
+    "pipecat-ai[daily,deepgram,grok,local-smart-turn-v3,runner,silero]",
+    "pipecat-ai-whisker",
+    "pipecat-ai-tail",
+    "twilio",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.404,<2",
+    "ruff>=0.12.11,<1",
+]
+
+[tool.ruff]
+line-length = 100
+[tool.ruff.lint]
+select = ["I"]
