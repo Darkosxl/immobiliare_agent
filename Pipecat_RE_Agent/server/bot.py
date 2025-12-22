@@ -23,6 +23,7 @@ Run the bot using::
 import os
 
 import aiohttp
+from system_prompt import SYSTEM_PROMPT
 from dotenv import load_dotenv
 from loguru import logger
 from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
@@ -76,7 +77,7 @@ async def run_bot(transport: BaseTransport, request: AgentRequest) -> None:
         messages = [
             {
                 "role": "system",
-                "content": "You are a friendly AI assistant. Respond naturally and keep your answers conversational.",
+                "content": SYSTEM_PROMPT,
             },
         ]
 
