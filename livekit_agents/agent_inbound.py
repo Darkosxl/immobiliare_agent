@@ -13,6 +13,12 @@ import logging
 import random
 from enum import Enum
 from typing import Literal
+import os
+import json
+import requests
+import google.auth
+from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -98,7 +104,8 @@ class MyAgent(Agent):
         #TODO write database function to fetch current listings given an agency name
         #TODO write a database with columns: description, address, price, link, real_Estate_agency
         
-        listings = db.getCurrentListings(Real_Estate_Agency=agency)
+        
+        listings = db.getCurrentListings()
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={
