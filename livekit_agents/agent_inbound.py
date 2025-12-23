@@ -36,16 +36,60 @@ class MyAgent(Agent):
     
     @function_tool
     async def schedule_meeting(
-        self, context: RunContext, street_address: str, date: str
+        self, context: RunContext, apartment_address: str, date: str
     ):
+    """Called when the user wants to book an appointment/visit or a tour of the apartment
+    Ensure the address of the apartment and the date are provided.
+
+    Args:
+        apartment_address (str): The address of the apartment
+        date (str): The date of the appointment
+        
+    """
         
 
 
     @function_tool
-    async def scrape_idealista(
-        url: str
+    async def get_apartment_info(
+        self, context: RunContext, apartment_address: str
     ):
+    """Called when the user explicitly asks questions relating to an apartment or wants information
+    on the apartment.
+    Ensure the address of the apartment is provided.
 
+    Args:
+        apartment_address (str): The address of the apartment
+    """
+    
+    @function_tool 
+    async def end_call(self, ctx: RunContext):
+        """Called when the user wants to end the call"""
+        logger.info(f"ending the call")
+        current_speech = ctx.session.current_speech
+        if current_spech:
+            await current_speech.wait_for_playout()
+        
+        await self.hangup()
+    
+    @function_tool()
+    async def get_existing_bookings(self, ctx: RunContext, apartment_address: str, date:str):
+
+        """Called when the user wants to learn about their current bookings for a given apartment
+
+        Args:
+            apartment_address (str): The address of the apartment
+            date (str): The date of the appointment
+        """
+    @function_tool()
+    async def cancel_booking(self, ctx: RunContext, apartment_address: str, date:str):
+        """Called when the user wants to cancel a booking for a given apartment
+
+        Args:
+            apartment_address (str): The address of the apartment
+            date (str): The date of the appointment
+        """
+    @function_tool()
+    async def check_available_slots(self, ctx: RunContext, )
 server = AgentServer()
 
 def prewarm(porc: JobProcess):
@@ -73,4 +117,24 @@ async def entrypoint(ctx: JobContext):
         false_interruption_timeout=1.0,
     )
 
-    usage_collector = metrics.
+    usage_collector = metrics.UsageCollector()
+    @session.on("metrics_collected")
+    def on_metrics(ev: MetricsCollectedEvent):
+        metrics.log_metrics(ev.metrics)
+        usage_collector.collect(ev.metrics)
+    
+    async def log_usage():
+        summary = usage_collector.get_summary()
+        logger.info(f"Usage: {summary}")
+    ctx.add_shutdown_callback(log_usage)
+
+    await session.start(
+        agent=MyAgent(),
+        room=ctx.room,
+        room_options=room_io.RoomOptions(
+            audio_input=room_io.AudioInputOptions(
+                #noise_cancellation=noise_cancellation.BVC(),
+            ),
+        ),
+    )
+    

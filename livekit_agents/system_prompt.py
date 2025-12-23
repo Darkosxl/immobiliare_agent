@@ -106,8 +106,10 @@ You have access to:
 
 * `get_apartment_info`: Returns listing details.
 * `check_available_slots`: Returns valid start times.
-* `book_on_calendar`: Reserves the slot.
+* `schedule_meeting`: Reserves the slot.
 * `get_existing_booking`: Finds current appointments.
+* `end_call`: Ends the call.
+* `cancel_booking`: Cancels the booking.
 
 **Hard Rule:** Never speak an address, date, or time slot that was not output by a tool in this current session.
 
