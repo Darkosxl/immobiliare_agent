@@ -35,7 +35,10 @@ from livekit.agents import (
     function_tool,
     JobProcess
 )
-from livekit.plugins import openai,silero
+from livekit.plugins import openai, silero, google as lk_google, deepgram
+from livekit.agents import room_io, metrics, noise_cancellation
+from livekit.agents.voice import MetricsCollectedEvent
+from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from system_prompt import SYSTEM_PROMPT
 import database as db
 from datetime import datetime, timedelta
@@ -45,6 +48,15 @@ logger = logging.getLogger("grok-agent")
 logger.setLevel(logging.INFO)
 
 load_dotenv()
+
+def get_google_token():
+    """Get OAuth token from service account credentials."""
+    credentials = service_account.Credentials.from_service_account_file(
+        os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+        scopes=["https://www.googleapis.com/auth/calendar"]
+    )
+    credentials.refresh(Request())
+    return credentials.token
 
 class MyAgent(Agent):
     def __init__(self) -> None:
@@ -164,7 +176,7 @@ class MyAgent(Agent):
         """Called when the user wants to end the call"""
         logger.info(f"ending the call")
         current_speech = ctx.session.current_speech
-        if current_spech:
+        if current_speech:
             await current_speech.wait_for_playout()
         
         await self.hangup()
@@ -240,7 +252,7 @@ class MyAgent(Agent):
             return "Booking Successfully Cancelled"
         else: 
             #TODO: for tool call fails I should implement a logging system in the dashboard
-            console.log("yall something went wrong")
+            logger.info("yall something went wrong")
             return "Booking Successfully Cancelled"
 
     @function_tool()
@@ -321,7 +333,7 @@ class MyAgent(Agent):
 
 server = AgentServer()
 
-def prewarm(porc: JobProcess):
+def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
 
 server.setup_fnc = prewarm
@@ -329,12 +341,16 @@ server.setup_fnc = prewarm
 @server.rtc_session()
 async def entrypoint(ctx: JobContext):
     ctx.log_context_fields = {
-        "room": ctx.room_name,
+        "room": ctx.room.name,
     }
     session = AgentSession(
-        stt="deepgram/nova-3",
-        llm="openrouter/x-ai/grok-4-fast",
-        tts=google.TTS(
+        stt=deepgram.STT(model="nova-3"),
+        llm=openai.LLM(
+            model="x-ai/grok-4-fast",
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+        ),
+        tts=lk_google.TTS(
             gender="female",
             voice_name="it-IT-Chirp3-HD-Achernar",
             language="it-IT"
@@ -363,8 +379,10 @@ async def entrypoint(ctx: JobContext):
         room=ctx.room,
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
-                #noise_cancellation=noise_cancellation.BVC(),
+                noise_cancellation=noise_cancellation.BVC(),
             ),
         ),
     )
     
+if __name__ == "__main__":
+    cli.run_app(server)
