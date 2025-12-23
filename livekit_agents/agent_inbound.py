@@ -1,14 +1,14 @@
-from crawl4ai import (
-    AdaptiveConfig,
-    AdaptiveCrawler,
-    AsyncWebCrawler,
-    BrowserConfig,
-    CacheMode,
-    CrawlerRunConfig,
-    LLMConfig,
-    VirtualScrollConfig,
-    JsonCssExtractionStrategy
-)
+#from crawl4ai import (
+#    AdaptiveConfig,
+#    AdaptiveCrawler,
+#    AsyncWebCrawler,
+#    BrowserConfig,
+#    CacheMode,
+#    CrawlerRunConfig,
+#    LLMConfig,
+#    VirtualScrollConfig,
+#    JsonCssExtractionStrategy
+#)
 import logging
 import random
 from enum import Enum
@@ -22,13 +22,17 @@ from livekit.agents import (
     AgentSession,
     ChatContext,
     FunctionTool,
-    JobCOntext,
+    JobContext,
     ModelSettings,
+    RunContext,
     cli,
-    function_tool
+    function_tool,
+    JobProcess
 )
 from livekit.plugins import openai,silero
-from system_prompt.py import SYSTEM_PROMPT
+from system_prompt import SYSTEM_PROMPT
+import database as db
+from datetime import datetime, timedelta
 
 
 logger = logging.getLogger("grok-agent")
@@ -49,16 +53,43 @@ class MyAgent(Agent):
     async def schedule_meeting(
         self, context: RunContext, apartment_address: str, date: str
     ):
-    """Called when the user wants to book an appointment/visit or a tour of the apartment
-    Ensure the address of the apartment and the date are provided.
+        """Called when the user wants to book an appointment/visit or a tour of the apartment
+        Ensure the address of the apartment and the date are provided.
 
-    Args:
-        apartment_address (str): The address of the apartment
-        date (str): The date of the appointment
+        Args:
+            apartment_address (str): The address of the apartment
+            date (str): The date of the appointment
+            
+        """
+        #TODO this token might not be implemented, well I'm not sure entirely how I will go about 
+        #our voiceai system I might keep our old dashboard, I guess I need to give inbound
+        #ah fk it go on
+        token = get_google_token()
+        start = datetime.fromisoformat(date)
+        end = start + timedelta(minutes=30)
+
+        url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        body = {
+            "summary": f"{apartment_address} appuntamento {date}",
+            "start": {
+                "dateTime": start.isoformat(),
+                "timeZone": "Europe/Rome"
+            },
+            "end": {
+                "dateTime": end.isoformat(),
+                "timeZone": "Europe/Rome"
+            },
+            "description": "Visita",
+            "reminders": {
+                "useDefault": False,
+                "overrides": [
+                    {"method": "email", "minutes": 6 * 60},
+                    {"method": "popup", "minutes": 30}
+                ]
+            }
+        }
+        response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
         
-    """
-
-    
 
     @function_tool
     async def get_apartment_info(
@@ -71,7 +102,7 @@ class MyAgent(Agent):
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": : "Bearer " + os.getenv("OPENROUTER_API_KEY"),
+                "Authorization": "Bearer " + os.getenv("OPENROUTER_API_KEY"),
                 "HTTP-Referer": "https://rinova.capmapai.com",
                 "X-Title": "Rinova AI",
             },
@@ -80,11 +111,11 @@ class MyAgent(Agent):
                 "messages": [
                     {
                         "role": "user",
-                        "content": "You are AItaxonomy, a real estate mapping assistant. \
-                        You have these listings: " + listings + "\ \
-                        your task is to map the listing that the user specified here with the \
-                        appropriate listing name, since the user might have given an incomplete/half-incorrect address, this is the address they gave: " \
-                        + apartment_address + " Output which listing name it is, and nothing else, if you find no matches, output 'None'"
+                        "content": f"""You are AItaxonomy, a real estate mapping assistant.
+                        You have these listings: {listings}
+                        your task is to map the listing that the user specified here with the 
+                        appropriate listing name, since the user might have given an incomplete/half-incorrect address, this is the address they gave: " 
+                        {apartment_address} Output which listing name it is, and nothing else, if you find no matches, output 'None'"""
                     }
                 ],
             })
@@ -139,6 +170,33 @@ class MyAgent(Agent):
         Args:
             date (str): The date of the appointment
         """
+        start_date = datetime.fromisoformat(date)
+        end_date = start_date + timedelta(minutes=30)
+        token = get_google_token()
+        params = {
+            "timeMin": start_date.isoformat(),
+            "timeMax": end_date.isoformat(),
+            "singleEvents": True,
+            "orderBy": "startTime",
+            "maxResults": 1
+        }
+        url_listEvent = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        response_listEvent = requests.get(url_listEvent, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, params=params)
+        data = response_listEvent.json()
+        event_summaries = []
+        event_times = []
+        if data["items"] == []:
+            return "No events found on this time"
+        for events in data["items"]:
+            if datetime.fromisoformat(events["start"]["dateTime"]).replace(tzinfo=None) == start_date.replace(tzinfo=None):
+                event_summaries.append(events["summary"])
+                event_times.append(events["start"]["dateTime"])
+        for i in range(len(event_summaries)):
+            event_summaries[i] = event_summaries[i] + " at " + event_times[i]
+        return "all events on this time: " + (", ").join(event_summaries)   
+
+
+
     @function_tool()
     async def cancel_booking(self, ctx: RunContext, date: str):
         """Called when the user wants to cancel a booking for a given apartment
@@ -146,6 +204,38 @@ class MyAgent(Agent):
         Args:
             date (str): The date of the appointment
         """
+        start_date = datetime.fromisoformat(date)
+        end_date = start_date + timedelta(minutes=30)
+        token = get_google_token()
+        params = {
+            "timeMin": start_date.isoformat(),
+            "timeMax": end_date.isoformat(),
+            "singleEvents": True,
+            "orderBy": "startTime",
+            "maxResults": 1
+        }
+        url_listEvent = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        response_listEvent = requests.get(url_listEvent, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, params=params)
+        data = response_listEvent.json()
+        event_id = None
+        if data["items"] == []:
+            return "Booking Successfully Cancelled"
+        for events in data["items"]:
+            if datetime.fromisoformat(events["start"]["dateTime"]).replace(tzinfo=None) == start_date.replace(tzinfo=None):
+                event_id = events["id"]
+        if event_id == None:
+            return "Booking Successfully Cancelled"
+        
+
+        url_deleteEvent = "https://www.googleapis.com/calendar/v3/calendars/primary/events/"+event_id
+        response = requests.delete(url_deleteEvent, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+        if response == {}:
+            return "Booking Successfully Cancelled"
+        else: 
+            #TODO: for tool call fails I should implement a logging system in the dashboard
+            console.log("yall something went wrong")
+            return "Booking Successfully Cancelled"
+
     @function_tool()
     async def check_available_slots(self, ctx: RunContext, date: str):
         """Called when the user wants to check available slots for a given date
@@ -153,6 +243,75 @@ class MyAgent(Agent):
         Args:
             date (str): The date of the appointment
         """
+        start_10 = datetime.fromisoformat(date).replace(hour=10, minute=0, second=0, microsecond=0)
+        end_1230 = datetime.fromisoformat(date).replace(hour=12, minute=30, second=0, microsecond=0)
+        start_15 = datetime.fromisoformat(date).replace(hour=15, minute=0, second=0, microsecond=0)
+        end_19 = datetime.fromisoformat(date).replace(hour=19, minute=0, second=0, microsecond=0)
+        
+        
+        token = get_google_token()
+        url = "https://www.googleapis.com/calendar/v3/freeBusy"
+        body = {
+            "timeMin": start_10.isoformat(),
+            "timeMax": end_1230.isoformat(),
+            "items": [
+                {
+                    "id": "primary"
+                }
+            ]
+        }
+        response_morning = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
+        
+        token = get_google_token()
+        body = {
+            "timeMin": start_15.isoformat(),
+            "timeMax": end_19.isoformat(),
+            "items": [
+                {
+                    "id": "primary"
+                }
+            ]
+        }
+        response_afternoon = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
+        
+        data_morning = response_morning.json()
+        data_afternoon = response_afternoon.json()
+        available_slots = []
+        begin = datetime.fromisoformat(date).replace(hour=10, minute=0, second=0, microsecond=0)
+        end = datetime.fromisoformat(date).replace(hour=12, minute=30, second=0, microsecond=0)
+        for i in range(len(data_morning["calendars"]["primary"]["busy"])):
+            busy_start = data_morning["calendars"]["primary"]["busy"][i]["start"]
+            busy_end = data_morning["calendars"]["primary"]["busy"][i]["end"]
+            if end <= busy_end:
+                break
+            if begin < busy_start:
+                available_slots.append((begin, busy_start))
+            #elif begin == busy_start:
+            #    begin = busy_end
+            #    end = begin + timedelta(minutes=30)    
+            #else:
+            #    continue    
+            begin = busy_end
+            
+
+        begin = datetime.fromisoformat(date).replace(hour=15, minute=0, second=0, microsecond=0)
+        end = datetime.fromisoformat(date).replace(hour=19, minute=0, second=0, microsecond=0)
+        for i in range(len(data_afternoon["calendars"]["primary"]["busy"])):
+            busy_start = data_afternoon["calendars"]["primary"]["busy"][i]["start"]
+            busy_end = data_afternoon["calendars"]["primary"]["busy"][i]["end"]
+            if end <= busy_end:
+                break
+            if begin < busy_start:
+                available_slots.append((begin, busy_start))
+            #elif begin == busy_start:
+            #    begin = busy_end
+            #    end = begin + timedelta(minutes=30)    
+            #else:
+            #    continue    
+            begin = busy_end
+            
+        return "Here are the available slots, lead them to the earliest one if it works with the customer, otherwise tell them a time that works for them: " + str(available_slots) + " if there was no available slots you will see nothing here."
+
 server = AgentServer()
 
 def prewarm(porc: JobProcess):
