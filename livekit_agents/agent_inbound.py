@@ -19,7 +19,7 @@ import requests
 import google.auth
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
-
+from geopy.distance import geodesic
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from livekit.agents import (
@@ -35,8 +35,8 @@ from livekit.agents import (
     function_tool,
     JobProcess
 )
-from livekit.plugins import openai, silero, google as lk_google, deepgram
-from livekit.agents import room_io, metrics, noise_cancellation
+from livekit.plugins import openai, silero, google as lk_google, deepgram, noise_cancellation
+from livekit.agents import room_io, metrics
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from system_prompt import SYSTEM_PROMPT
@@ -57,7 +57,8 @@ def get_google_token():
     )
     credentials.refresh(Request())
     return credentials.token
-
+#TODO check tool calls if they work
+#TODO add agent to push confused client into doing specific things
 class MyAgent(Agent):
     def __init__(self) -> None:
         super().__init__(
@@ -113,42 +114,101 @@ class MyAgent(Agent):
     async def get_apartment_info(
         self, context: RunContext, apartment_address: str
     ):
-        #TODO write database function to fetch current listings given an agency name
-        #TODO write a database with columns: description, address, price, link, real_Estate_agency
         
-        
-        listings = db.getCurrentListings()
-        response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": "Bearer " + os.getenv("OPENROUTER_API_KEY"),
-                "HTTP-Referer": "https://rinova.capmapai.com",
-                "X-Title": "Rinova AI",
+        response_openstreetmap = requests.get(
+            url="https://nominatim.openstreetmap.org/search",
+            params={
+                "q": f"{apartment_address}, Milano, Italia",
+                "format": "json",
+                "limit": 1
             },
-            data=json.dumps({
-                "model": "google/gemini-3-flash-preview",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": f"""You are AItaxonomy, a real estate mapping assistant.
-                        You have these listings: {listings}
-                        your task is to map the listing that the user specified here with the 
-                        appropriate listing name, since the user might have given an incomplete/half-incorrect address, this is the address they gave: " 
-                        {apartment_address} Output which listing name it is, and nothing else, if you find no matches, output 'None'"""
-                    }
-                ],
-            })
-        )
-
-        data = response.json()
-        listing_name = data['message']['content']
-        #TODO implement this function)
-        listing = db.getListing(listing_name)
-        listing_json = listing.json()
+            headers={"User-Agent": "RinovaAI/1.0 (rinova.capmapai.com)"}
+        )        
+        geo_data = response_openstreetmap.json()
         
-        #TODO OPTIONAL: json might be the best might not be the best you can investigate
-        return listing_json
+        # 2. If geocoding failed, use LLM to match listing name
+        if not geo_data: 
+            listings = db.getCurrentListings()
+            response = requests.post(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": "Bearer " + os.getenv("OPENROUTER_API_KEY"),
+                    "HTTP-Referer": "https://rinova.capmapai.com",
+                    "X-Title": "Rinova AI",
+                },
+                data=json.dumps({
+                "model": "google/gemini-3-flash-preview",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": f"""You are AItaxonomy, a real estate mapping assistant.
+                            You have these listings: {listings}
+                            The user asked about: "{apartment_address}"
+                            
+                            Your task: Find the best matching listing name.
+                            - If you find a match, output ONLY the listing name.
+                            - If no match, output 3 random listing names from the list, separated by commas.
+                            
+                            Output only the listing name(s), nothing else."""
+                        }
+                    ],
+                })
+            )
+            data = response.json()
+            listing_names = data['choices'][0]['message']['content']
+            
+            # If multiple listings returned (no match), return suggestions
+            if "," in listing_names:
+                return json.dumps({
+                    "status": "suggestions",
+                    "suggestions": [name.strip() for name in listing_names.split(",")]
+                })
+            
+            # Single match found - try to get it, or return all listings as suggestions
+            listing = db.getListing(listing_names.strip())
+            if listing:
+                return listing.json()
+            else:
+                # Fallback: return all available listings
+                all_listings = db.getCurrentListings()
+                return json.dumps({
+                    "status": "suggestions",
+                    "suggestions": [name.strip() for name in all_listings.split(",")[:3]]
+                })
 
+        # 3. Geocoding succeeded - find closest listings by distance
+        user_coords = (float(geo_data[0]["lat"]), float(geo_data[0]["lon"]))
+        
+        listings = db.getAllListingsWithCoords()
+        
+        # Calculate distance for each listing
+        for listing in listings:
+            listing['distance_km'] = geodesic(
+                user_coords, 
+                (listing['latitude'], listing['longitude'])
+            ).km
+        
+        # Sort by distance and get top 3
+        top3 = sorted(listings, key=lambda x: x['distance_km'])[:3]
+
+        # Return raw data - let LLM decide how to present it
+        return json.dumps({
+            "status": "found_nearby" if top3[0]['distance_km'] >= 0.1 else "exact_match",
+            "closest": {
+                "name": top3[0]['name'],
+                "address": top3[0]['address'],
+                "distance_meters": int(top3[0]['distance_km'] * 1000),
+                "price": top3[0]['price'],
+                "description": top3[0]['description'][:300]
+            },
+            "alternatives": [
+                {"name": l['name'], "distance_meters": int(l['distance_km'] * 1000)} 
+                for l in top3[1:3]
+            ]
+        })
+
+
+        
     """Called when the user explicitly asks questions relating to an apartment or wants information
     on the apartment.
     Ensure the address of the apartment is provided.
@@ -156,7 +216,9 @@ class MyAgent(Agent):
     Args:
         apartment_address (str): The address of the apartment
     """
-
+    #TODO MAIN PROBLEM 1: VOICE AI SHOULD LEAD THE CONVERSATION
+    #TODO MAIN PROBLEM 2: STT SHOULD BE MADE INTO A PIPELINE TO SEE WHICH ONE PERFORMS BEST
+    #TODO MAIN PROBLEM 3: WHEN A PERSON DOESNT KNOW WTF ADDRESS THEY ARE TALKING ABOUT THE APARTMENT INFO TOOL SHOULD BE A TURKISH BAKKAL
 
     #    idealista_browser_conf = BrowserConfig(
     #        headless=False,
@@ -344,7 +406,7 @@ async def entrypoint(ctx: JobContext):
         "room": ctx.room.name,
     }
     session = AgentSession(
-        stt=deepgram.STT(model="nova-3"),
+        stt=deepgram.STT(model="nova-3", language="it-IT"),
         llm=openai.LLM(
             model="x-ai/grok-4-fast",
             base_url="https://openrouter.ai/api/v1",

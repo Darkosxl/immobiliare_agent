@@ -126,5 +126,20 @@ def getListing(listing_name):
     finally:
         conn.close()
 
+def getAllListingsWithCoords():
+    """Get all listings that have latitude and longitude coordinates"""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    try:
+        c.execute("SELECT * FROM listings WHERE latitude IS NOT NULL AND longitude IS NOT NULL")
+        rows = c.fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"Error fetching listings with coords: {e}")
+        return []
+    finally:
+        conn.close()
+
 # Auto-init on module import to ensure table exists
 init_db()
