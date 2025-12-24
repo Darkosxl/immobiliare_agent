@@ -131,7 +131,7 @@ You have access to the following tools. **ALL date arguments MUST be in ISO 8601
 * "giovedì alle 10" → next Thursday at 10:00:00
 * "venerdì pomeriggio" → next Friday, use 15:00:00 as default afternoon time
 
-**CRITICAL:** NEVER pass Italian words like "domani", "giovedì", "mattina" directly to tools. Always convert to ISO format first.
+**Note:** Date arguments must always be ISO format. Address arguments (e.g., for `get_apartment_info`) can remain in Italian.
 
 **Hard Rule:** Never speak an address, date, or time slot that was not output by a tool in this current session.
 
