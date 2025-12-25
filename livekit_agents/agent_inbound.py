@@ -41,13 +41,14 @@ from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from system_prompt import SYSTEM_PROMPT
 import database as db
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as tz
 
 
 logger = logging.getLogger("grok-agent")
 logger.setLevel(logging.INFO)
 
 load_dotenv()
+CALENDAR = os.getenv("CALENDAR_ID")
 
 def get_google_token():
     """Get OAuth token from service account credentials."""
@@ -80,16 +81,21 @@ class MyAgent(Agent):
             date (str): The date of the appointment
             
         """
-        #TODO this token might not be implemented, well I'm not sure entirely how I will go about 
-        #our voiceai system I might keep our old dashboard, I guess I need to give inbound
-        #ah fk it go on
+        # Extract phone number from room name (format: call-_393517843713_...)
+        room_name = context.session.room.name if context.session.room else ""
+        phone_number = "Unknown"
+        if room_name.startswith("call-"):
+            parts = room_name.split("_")
+            if len(parts) >= 2:
+                phone_number = parts[1]
+        
         token = get_google_token()
         start = datetime.fromisoformat(date)
         end = start + timedelta(minutes=30)
 
-        url = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        url = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR}/events"
         body = {
-            "summary": f"{apartment_address} appuntamento {date}",
+            "summary": f"Visita: {apartment_address}",
             "start": {
                 "dateTime": start.isoformat(),
                 "timeZone": "Europe/Rome"
@@ -98,7 +104,7 @@ class MyAgent(Agent):
                 "dateTime": end.isoformat(),
                 "timeZone": "Europe/Rome"
             },
-            "description": "Visita",
+            "description": f"Visita immobile\nTelefono cliente: {phone_number}",
             "reminders": {
                 "useDefault": False,
                 "overrides": [
@@ -108,6 +114,11 @@ class MyAgent(Agent):
             }
         }
         response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
+        if response.status_code != 200:
+            logger.error(f"Failed to create calendar event: {response.text}")
+        # Always return success message to avoid confusing the voice AI
+        return f"Appuntamento confermato per {apartment_address}"
+
         
 
     @function_tool
@@ -237,10 +248,8 @@ class MyAgent(Agent):
     async def end_call(self, ctx: RunContext):
         """Called when the user wants to end the call"""
         logger.info(f"ending the call")
-        current_speech = ctx.session.current_speech
-        if current_speech:
-            await current_speech.wait_for_playout()
-        
+        # Wait for any current speech to finish before hanging up
+        await ctx.wait_for_playout()
         await self.hangup()
     
     @function_tool()
@@ -251,17 +260,18 @@ class MyAgent(Agent):
         Args:
             date (str): The date of the appointment
         """
-        start_date = datetime.fromisoformat(date)
+        start_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
         end_date = start_date + timedelta(minutes=30)
         token = get_google_token()
         params = {
             "timeMin": start_date.isoformat(),
             "timeMax": end_date.isoformat(),
+            "timeZone": "Europe/Rome",
             "singleEvents": True,
             "orderBy": "startTime",
             "maxResults": 1
         }
-        url_listEvent = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        url_listEvent = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR}/events"
         response_listEvent = requests.get(url_listEvent, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, params=params)
         data = response_listEvent.json()
         event_summaries = []
@@ -285,17 +295,19 @@ class MyAgent(Agent):
         Args:
             date (str): The date of the appointment
         """
-        start_date = datetime.fromisoformat(date)
+        start_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
         end_date = start_date + timedelta(minutes=30)
         token = get_google_token()
         params = {
             "timeMin": start_date.isoformat(),
             "timeMax": end_date.isoformat(),
+            "timeZone": "Europe/Rome",
             "singleEvents": True,
             "orderBy": "startTime",
             "maxResults": 1
         }
-        url_listEvent = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+        
+        url_listEvent = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR}/events"
         response_listEvent = requests.get(url_listEvent, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, params=params)
         data = response_listEvent.json()
         event_id = None
@@ -308,7 +320,7 @@ class MyAgent(Agent):
             return "Booking Successfully Cancelled"
         
 
-        url_deleteEvent = "https://www.googleapis.com/calendar/v3/calendars/primary/events/"+event_id
+        url_deleteEvent = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR}/events/"+event_id
         response = requests.delete(url_deleteEvent, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
         if response == {}:
             return "Booking Successfully Cancelled"
@@ -324,32 +336,36 @@ class MyAgent(Agent):
         Args:
             date (str): The date of the appointment
         """
-        start_10 = datetime.fromisoformat(date).replace(hour=10, minute=0, second=0, microsecond=0)
-        end_1230 = datetime.fromisoformat(date).replace(hour=12, minute=30, second=0, microsecond=0)
-        start_15 = datetime.fromisoformat(date).replace(hour=15, minute=0, second=0, microsecond=0)
-        end_19 = datetime.fromisoformat(date).replace(hour=19, minute=0, second=0, microsecond=0)
         
+        base_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
+        start_10 = base_date.replace(hour=10, minute=0, second=0, microsecond=0)
+        end_1230 = base_date.replace(hour=12, minute=30, second=0, microsecond=0)
+        start_15 = base_date.replace(hour=15, minute=0, second=0, microsecond=0)
+        end_19 = base_date.replace(hour=19, minute=0, second=0, microsecond=0)
         
         token = get_google_token()
         url = "https://www.googleapis.com/calendar/v3/freeBusy"
         body = {
             "timeMin": start_10.isoformat(),
             "timeMax": end_1230.isoformat(),
+            "timeZone": "Europe/Rome",
             "items": [
                 {
-                    "id": "primary"
+                    "id": CALENDAR
                 }
             ]
         }
+        logger.info(f"FreeBusy request body (morning): {body}")
         response_morning = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
         
         token = get_google_token()
         body = {
             "timeMin": start_15.isoformat(),
             "timeMax": end_19.isoformat(),
+            "timeZone": "Europe/Rome",
             "items": [
                 {
-                    "id": "primary"
+                    "id": CALENDAR
                 }
             ]
         }
@@ -357,41 +373,62 @@ class MyAgent(Agent):
         
         data_morning = response_morning.json()
         data_afternoon = response_afternoon.json()
+        
+        # Log the actual response to debug
+        logger.info(f"FreeBusy morning response: {data_morning}")
+        logger.info(f"FreeBusy afternoon response: {data_afternoon}")
+        
+        # Check for errors
+        if "error" in data_morning:
+            return f"Calendar error: {data_morning['error'].get('message', 'Unknown error')}"
+        
+        if "calendars" not in data_morning:
+            return f"Unexpected response from calendar API: {data_morning}"
+        
         available_slots = []
-        begin = datetime.fromisoformat(date).replace(hour=10, minute=0, second=0, microsecond=0)
-        end = datetime.fromisoformat(date).replace(hour=12, minute=30, second=0, microsecond=0)
-        for i in range(len(data_morning["calendars"]["primary"]["busy"])):
-            busy_start = data_morning["calendars"]["primary"]["busy"][i]["start"]
-            busy_end = data_morning["calendars"]["primary"]["busy"][i]["end"]
-            if end <= busy_end:
-                break
-            if begin < busy_start:
-                available_slots.append((begin, busy_start))
-            #elif begin == busy_start:
-            #    begin = busy_end
-            #    end = begin + timedelta(minutes=30)    
-            #else:
-            #    continue    
-            begin = busy_end
+        begin = start_10
+        end = end_1230
+        
+        calendar_data = data_morning["calendars"].get(CALENDAR, {})
+        morning_busy = calendar_data.get("busy", [])
+        
+        # If no busy slots, entire morning is available
+        if not morning_busy:
+            available_slots.append((start_10.strftime("%H:%M"), end_1230.strftime("%H:%M")))
+        else:
+            for i in range(len(morning_busy)):
+                busy_start = datetime.fromisoformat(morning_busy[i]["start"].replace("Z", "+00:00"))
+                busy_end = datetime.fromisoformat(morning_busy[i]["end"].replace("Z", "+00:00"))
+                if begin < busy_start:
+                    available_slots.append((begin.strftime("%H:%M"), busy_start.strftime("%H:%M")))
+                begin = busy_end
+            # Check if there's time left after last busy slot
+            if begin < end:
+                available_slots.append((begin.strftime("%H:%M"), end.strftime("%H:%M")))
             
 
-        begin = datetime.fromisoformat(date).replace(hour=15, minute=0, second=0, microsecond=0)
-        end = datetime.fromisoformat(date).replace(hour=19, minute=0, second=0, microsecond=0)
-        for i in range(len(data_afternoon["calendars"]["primary"]["busy"])):
-            busy_start = data_afternoon["calendars"]["primary"]["busy"][i]["start"]
-            busy_end = data_afternoon["calendars"]["primary"]["busy"][i]["end"]
-            if end <= busy_end:
-                break
-            if begin < busy_start:
-                available_slots.append((begin, busy_start))
-            #elif begin == busy_start:
-            #    begin = busy_end
-            #    end = begin + timedelta(minutes=30)    
-            #else:
-            #    continue    
-            begin = busy_end
+        # Afternoon slots
+        begin = start_15
+        end = end_19
+        
+        afternoon_data = data_afternoon.get("calendars", {}).get(CALENDAR, {})
+        afternoon_busy = afternoon_data.get("busy", [])
+        
+        # If no busy slots, entire afternoon is available
+        if not afternoon_busy:
+            available_slots.append((start_15.strftime("%H:%M"), end_19.strftime("%H:%M")))
+        else:
+            for i in range(len(afternoon_busy)):
+                busy_start = datetime.fromisoformat(afternoon_busy[i]["start"].replace("Z", "+00:00"))
+                busy_end = datetime.fromisoformat(afternoon_busy[i]["end"].replace("Z", "+00:00"))
+                if begin < busy_start:
+                    available_slots.append((begin.strftime("%H:%M"), busy_start.strftime("%H:%M")))
+                begin = busy_end
+            # Check if there's time left after last busy slot
+            if begin < end:
+                available_slots.append((begin.strftime("%H:%M"), end.strftime("%H:%M")))
             
-        return "Here are the available slots, lead them to the earliest one if it works with the customer, otherwise tell them a time that works for them: " + str(available_slots) + " if there was no available slots you will see nothing here."
+        return "Available time slots for visits: (make up a 30 minute interval from the list of available times) " + str(available_slots)
 
 server = AgentServer()
 
