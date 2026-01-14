@@ -22,6 +22,7 @@ from google.oauth2 import service_account
 from geopy.distance import geodesic
 from dotenv import load_dotenv
 from pydantic import BaseModel 
+from livekit import api
 from livekit.agents import (
     Agent,
     AgentServer,
@@ -49,8 +50,7 @@ from datetime import datetime, timedelta, timezone as tz
 
 logger = logging.getLogger("grok-agent")
 logger.setLevel(logging.INFO)
-
-load_dotenv()
+load_dotenv(".env")
 CALENDAR = os.getenv("CALENDAR_ID")
 
 def get_google_token():
@@ -69,20 +69,32 @@ class RealEstateItalianAgent(Agent):
             instructions=SYSTEM_PROMPT
         )
 
+    
     async def on_enter(self):
         #TODO PROPER SPAM CALL CHECK
-        if not await self.check_whitelisted():
-            await self.session.generate_reply("Mi dispiace, non posso assisterti")
-            await self.end_call()
+        if not await self._check_whitelisted():
+            await self.session.generate_reply(instructions="let the other person know that you are hanging up because their number is not whitelisted", allow_interruptions=False)
+            #await self.session.wait_for_playout()
+            await self.hangup()
             return
         self.session.generate_reply(allow_interruptions=False)
 
-    @function_tool
-    async def check_whitelisted(self: str, context: RunContext):
-        """called to check if a number is whitelisted or not"""
+    async def hangup(self):
+        job_ctx = get_job_context()
+        await job_ctx.api.room.delete_room(
+            api.DeleteRoomRequest(
+                room=job_ctx.room.name,
+            )
+        )
+    async def _check_whitelisted(self) -> bool:
+        """Check if caller is whitelisted (NOT a function_tool - runs automatically)"""
+        # Use get_job_context() to access the room - AgentSession doesn't have .room directly
+        job_ctx = get_job_context()
+        room_name = job_ctx.room.name if job_ctx.room else ""
         phone_number = "Unknown"
-        if self.startswith("call-"):
-            parts = self.split("_")
+        
+        if room_name.startswith("call-"):
+            parts = room_name.split("_")
             if len(parts) >= 2:
                 phone_number = parts[1]
         
