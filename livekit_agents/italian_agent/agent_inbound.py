@@ -37,6 +37,7 @@ from livekit.agents import (
     function_tool,
     JobProcess
 )
+from livekit.plugins import groq
 from livekit.plugins import openai, silero, google as lk_google, deepgram, noise_cancellation
 from livekit.agents import room_io, metrics
 from livekit.agents.voice import MetricsCollectedEvent
@@ -508,11 +509,13 @@ async def entrypoint(ctx: JobContext):
     }
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
-        llm=openai.LLM(
-            model="x-ai/grok-4-fast",
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-        ),
+        llm=groq.LLM(model="kimi-k2-instruct")
+        #openai.LLM(
+        #   model="x-ai/grok-4-fast",
+        #    base_url="https://openrouter.ai/api/v1",
+        #    api_key=os.getenv("OPENROUTER_API_KEY"),
+        #)
+        ,
         tts=lk_google.TTS(
             gender="female",
             voice_name="it-IT-Chirp3-HD-Achernar",
