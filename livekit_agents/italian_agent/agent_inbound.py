@@ -100,7 +100,7 @@ class RealEstateItalianAgent(Agent):
             #await self.session.wait_for_playout()
             await self.hangup()
             return
-        self.session.generate_reply(allow_interruptions=False)
+        await self.session.generate_reply(allow_interruptions=False)
 
     async def hangup(self):
         job_ctx = get_job_context()

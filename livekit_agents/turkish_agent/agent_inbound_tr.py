@@ -69,7 +69,7 @@ class MyAgent(Agent):
         )
 
     async def on_enter(self):
-        self.session.generate_reply(allow_interruptions=False)
+        await self.session.generate_reply(allow_interruptions=False)
     
     @function_tool
     async def schedule_meeting(
