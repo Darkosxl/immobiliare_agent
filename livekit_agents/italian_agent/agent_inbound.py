@@ -46,12 +46,21 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools import database as db
 from italian_agent.system_prompt import SYSTEM_PROMPT
 from datetime import datetime, timedelta, timezone as tz
-
+import tempfile
 
 logger = logging.getLogger("grok-agent")
 logger.setLevel(logging.INFO)
 load_dotenv(".env")
 CALENDAR = os.getenv("CALENDAR_ID")
+
+#write the json to a temp file
+_google_creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+if _google_creds.strip().startswith("{"):
+    _creds_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+    _creds_file.write(_google_creds)
+    _creds_file.close()
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = _creds_file.name
+    logger.info(f"Wrote Google credentials to temp file: {_creds_file.name}")
 
 def get_google_token():
     """Get OAuth token from service account credentials.
@@ -63,14 +72,12 @@ def get_google_token():
     creds_value = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
     scopes = ["https://www.googleapis.com/auth/calendar"]
     
-    # Try parsing as JSON first (raw JSON string)
     try:
         creds_info = json.loads(creds_value)
         credentials = service_account.Credentials.from_service_account_info(
             creds_info, scopes=scopes
         )
     except (json.JSONDecodeError, TypeError):
-        # Fall back to file path
         credentials = service_account.Credentials.from_service_account_file(
             creds_value, scopes=scopes
         )
@@ -301,7 +308,6 @@ class RealEstateItalianAgent(Agent):
     async def end_call(self, ctx: RunContext):
         """Called when the user wants to end the call"""
         logger.info(f"ending the call")
-        # Wait for any current speech to finish before hanging up
         await ctx.wait_for_playout()
         await self.hangup()
     
