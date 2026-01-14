@@ -71,7 +71,7 @@ class RealEstateItalianAgent(Agent):
 
     async def on_enter(self):
         #TODO PROPER SPAM CALL CHECK
-        if not await check_whitelisted():
+        if not await self.check_whitelisted():
             await self.session.generate_reply("Mi dispiace, non posso assisterti")
             await self.end_call()
             return
