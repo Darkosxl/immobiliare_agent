@@ -309,9 +309,13 @@ class RealEstateItalianAgent(Agent):
 
    
     @function_tool 
-    async def end_call(self, ctx: RunContext):
-        """Called when the user wants to end the call"""
-        logger.info(f"ending the call")
+    async def end_call(self, ctx: RunContext, reason: str = "user_requested"):
+        """Called when the user wants to end the call
+        
+        Args:
+            reason: Why the call is ending (optional, defaults to user_requested)
+        """
+        logger.info(f"ending the call: {reason}")
         await ctx.wait_for_playout()
         await self.hangup()
     
