@@ -12,7 +12,6 @@
 import logging
 import random
 from enum import Enum
-from utils import check_whitelisted
 from typing import Literal
 import os
 import json
@@ -72,13 +71,34 @@ class RealEstateItalianAgent(Agent):
 
     async def on_enter(self):
         #TODO PROPER SPAM CALL CHECK
-        if not await check_whitelisted(self.session.room.name):
+        if not await check_whitelisted():
             await self.session.generate_reply("Mi dispiace, non posso assisterti")
             await self.end_call()
             return
         self.session.generate_reply(allow_interruptions=False)
 
-    
+    @function_tool
+    async def check_whitelisted(self: str, context: RunContext):
+        """called to check if a number is whitelisted or not"""
+        phone_number = "Unknown"
+        if self.startswith("call-"):
+            parts = self.split("_")
+            if len(parts) >= 2:
+                phone_number = parts[1]
+        
+        whitelist_path = os.getenv("WHITELIST")
+        if not whitelist_path:
+            return True
+        
+        
+        with open(whitelist_path) as file:
+            for line in file:
+                if phone_number in line.strip():
+                    return True
+        return False
+
+
+
     @function_tool
     async def schedule_meeting(
         self, context: RunContext, apartment_address: str, date: str
