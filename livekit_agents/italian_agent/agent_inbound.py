@@ -54,11 +54,27 @@ load_dotenv(".env")
 CALENDAR = os.getenv("CALENDAR_ID")
 
 def get_google_token():
-    """Get OAuth token from service account credentials."""
-    credentials = service_account.Credentials.from_service_account_file(
-        os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-        scopes=["https://www.googleapis.com/auth/calendar"]
-    )
+    """Get OAuth token from service account credentials.
+    
+    GOOGLE_APPLICATION_CREDENTIALS can be either:
+    - A file path to the JSON file
+    - The raw JSON string (for environments where you can't mount files)
+    """
+    creds_value = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    scopes = ["https://www.googleapis.com/auth/calendar"]
+    
+    # Try parsing as JSON first (raw JSON string)
+    try:
+        creds_info = json.loads(creds_value)
+        credentials = service_account.Credentials.from_service_account_info(
+            creds_info, scopes=scopes
+        )
+    except (json.JSONDecodeError, TypeError):
+        # Fall back to file path
+        credentials = service_account.Credentials.from_service_account_file(
+            creds_value, scopes=scopes
+        )
+    
     credentials.refresh(Request())
     return credentials.token
 #TODO check tool calls if they work
