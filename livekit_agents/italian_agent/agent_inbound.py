@@ -39,8 +39,10 @@ from livekit.plugins import openai, silero, google as lk_google, deepgram, noise
 from livekit.agents import room_io, metrics
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
-from system_prompt_tr import SYSTEM_PROMPT
-import database as db
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tools import database as db
+from italian_agent.system_prompt import SYSTEM_PROMPT
 from datetime import datetime, timedelta, timezone as tz
 
 
@@ -95,16 +97,16 @@ class MyAgent(Agent):
 
         url = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR}/events"
         body = {
-            "summary": f"Ziyaret: {apartment_address}",
+            "summary": f"Visita: {apartment_address}",
             "start": {
                 "dateTime": start.isoformat(),
-                "timeZone": "Europe/Istanbul"
+                "timeZone": "Europe/Rome"
             },
             "end": {
                 "dateTime": end.isoformat(),
-                "timeZone": "Europe/Istanbul"
+                "timeZone": "Europe/Rome"
             },
-            "description": f"Emlak ziyareti\nMüşteri telefonu: {phone_number}",
+            "description": f"Visita immobile\nTelefono cliente: {phone_number}",
             "reminders": {
                 "useDefault": False,
                 "overrides": [
@@ -117,7 +119,7 @@ class MyAgent(Agent):
         if response.status_code != 200:
             logger.error(f"Failed to create calendar event: {response.text}")
         # Always return success message to avoid confusing the voice AI
-        return f"Randevu onaylandı: {apartment_address}"
+        return f"Appuntamento confermato per {apartment_address}"
 
         
 
@@ -129,7 +131,7 @@ class MyAgent(Agent):
         response_openstreetmap = requests.get(
             url="https://nominatim.openstreetmap.org/search",
             params={
-                "q": f"{apartment_address}, Bartin, Turkey",
+                "q": f"{apartment_address}, Milano, Italia",
                 "format": "json",
                 "limit": 1
             },
@@ -260,13 +262,13 @@ class MyAgent(Agent):
         Args:
             date (str): The date of the appointment
         """
-        start_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=3)))
+        start_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
         end_date = start_date + timedelta(minutes=30)
         token = get_google_token()
         params = {
             "timeMin": start_date.isoformat(),
             "timeMax": end_date.isoformat(),
-            "timeZone": "Europe/Istanbul",
+            "timeZone": "Europe/Rome",
             "singleEvents": True,
             "orderBy": "startTime",
             "maxResults": 1
@@ -295,13 +297,13 @@ class MyAgent(Agent):
         Args:
             date (str): The date of the appointment
         """
-        start_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=3)))
+        start_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
         end_date = start_date + timedelta(minutes=30)
         token = get_google_token()
         params = {
             "timeMin": start_date.isoformat(),
             "timeMax": end_date.isoformat(),
-            "timeZone": "Europe/Istanbul",
+            "timeZone": "Europe/Rome",
             "singleEvents": True,
             "orderBy": "startTime",
             "maxResults": 1
@@ -337,94 +339,98 @@ class MyAgent(Agent):
             date (str): The date of the appointment
         """
         
-        base_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=3)))
-        # Turkey real estate: 08:00-19:00 non-stop
-        start_time = base_date.replace(hour=8, minute=0, second=0, microsecond=0)
-        end_time = base_date.replace(hour=19, minute=0, second=0, microsecond=0)
+        base_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
+        start_10 = base_date.replace(hour=10, minute=0, second=0, microsecond=0)
+        end_1230 = base_date.replace(hour=12, minute=30, second=0, microsecond=0)
+        start_15 = base_date.replace(hour=15, minute=0, second=0, microsecond=0)
+        end_19 = base_date.replace(hour=19, minute=0, second=0, microsecond=0)
         
         token = get_google_token()
         url = "https://www.googleapis.com/calendar/v3/freeBusy"
         body = {
-            "timeMin": start_time.isoformat(),
-            "timeMax": end_time.isoformat(),
-            "timeZone": "Europe/Istanbul",
+            "timeMin": start_10.isoformat(),
+            "timeMax": end_1230.isoformat(),
+            "timeZone": "Europe/Rome",
             "items": [
                 {
                     "id": CALENDAR
                 }
             ]
         }
-        logger.info(f"FreeBusy request body: {body}")
-        response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
+        logger.info(f"FreeBusy request body (morning): {body}")
+        response_morning = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
         
-        data = response.json()
+        token = get_google_token()
+        body = {
+            "timeMin": start_15.isoformat(),
+            "timeMax": end_19.isoformat(),
+            "timeZone": "Europe/Rome",
+            "items": [
+                {
+                    "id": CALENDAR
+                }
+            ]
+        }
+        response_afternoon = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
+        
+        data_morning = response_morning.json()
+        data_afternoon = response_afternoon.json()
         
         # Log the actual response to debug
-        logger.info(f"FreeBusy response: {data}")
+        logger.info(f"FreeBusy morning response: {data_morning}")
+        logger.info(f"FreeBusy afternoon response: {data_afternoon}")
         
         # Check for errors
-        if "error" in data:
-            return f"Calendar error: {data['error'].get('message', 'Unknown error')}"
+        if "error" in data_morning:
+            return f"Calendar error: {data_morning['error'].get('message', 'Unknown error')}"
         
-        if "calendars" not in data:
-            return f"Unexpected response from calendar API: {data}"
+        if "calendars" not in data_morning:
+            return f"Unexpected response from calendar API: {data_morning}"
         
         available_slots = []
-        begin = start_time
-        end = end_time
+        begin = start_10
+        end = end_1230
         
-        calendar_data = data["calendars"].get(CALENDAR, {})
-        busy_slots = calendar_data.get("busy", [])
+        calendar_data = data_morning["calendars"].get(CALENDAR, {})
+        morning_busy = calendar_data.get("busy", [])
         
-        # If no busy slots, entire day is available
-        if not busy_slots:
-            available_slots.append((start_time.strftime("%H:%M"), end_time.strftime("%H:%M")))
+        # If no busy slots, entire morning is available
+        if not morning_busy:
+            available_slots.append((start_10.strftime("%H:%M"), end_1230.strftime("%H:%M")))
         else:
-            for i in range(len(busy_slots)):
-                busy_start = datetime.fromisoformat(busy_slots[i]["start"].replace("Z", "+00:00"))
-                busy_end = datetime.fromisoformat(busy_slots[i]["end"].replace("Z", "+00:00"))
+            for i in range(len(morning_busy)):
+                busy_start = datetime.fromisoformat(morning_busy[i]["start"].replace("Z", "+00:00"))
+                busy_end = datetime.fromisoformat(morning_busy[i]["end"].replace("Z", "+00:00"))
                 if begin < busy_start:
                     available_slots.append((begin.strftime("%H:%M"), busy_start.strftime("%H:%M")))
                 begin = busy_end
             # Check if there's time left after last busy slot
             if begin < end:
                 available_slots.append((begin.strftime("%H:%M"), end.strftime("%H:%M")))
-        
-        # Lunch break: 12:00-13:30 - avoid unless no other option
-        lunch_start = "12:00"
-        lunch_end = "13:30"
-        
-        def overlaps_lunch(slot_start, slot_end):
-            """Check if a slot overlaps with lunch break"""
-            return not (slot_end <= lunch_start or slot_start >= lunch_end)
-        
-        def is_entirely_lunch(slot_start, slot_end):
-            """Check if slot is entirely within lunch break"""
-            return slot_start >= lunch_start and slot_end <= lunch_end
-        
-        # Separate slots into preferred (non-lunch) and lunch slots
-        preferred_slots = []
-        lunch_slots = []
-        
-        for slot in available_slots:
-            slot_start, slot_end = slot
-            if is_entirely_lunch(slot_start, slot_end):
-                lunch_slots.append(slot)
-            elif overlaps_lunch(slot_start, slot_end):
-                # Split slot around lunch break
-                if slot_start < lunch_start:
-                    preferred_slots.append((slot_start, lunch_start))
-                if slot_end > lunch_end:
-                    preferred_slots.append((lunch_end, slot_end))
-                # Keep original lunch portion as fallback
-                lunch_slots.append((max(slot_start, lunch_start), min(slot_end, lunch_end)))
-            else:
-                preferred_slots.append(slot)
-        
-        # Use preferred slots if available, otherwise fall back to lunch slots
-        final_slots = preferred_slots if preferred_slots else lunch_slots
             
-        return "Müsait ziyaret saatleri: (listeden 30 dakikalık bir aralık seçin) " + str(final_slots)
+
+        # Afternoon slots
+        begin = start_15
+        end = end_19
+        
+        afternoon_data = data_afternoon.get("calendars", {}).get(CALENDAR, {})
+        afternoon_busy = afternoon_data.get("busy", [])
+        
+        # If no busy slots, entire afternoon is available
+        if not afternoon_busy:
+            available_slots.append((start_15.strftime("%H:%M"), end_19.strftime("%H:%M")))
+        else:
+            for i in range(len(afternoon_busy)):
+                busy_start = datetime.fromisoformat(afternoon_busy[i]["start"].replace("Z", "+00:00"))
+                busy_end = datetime.fromisoformat(afternoon_busy[i]["end"].replace("Z", "+00:00"))
+                if begin < busy_start:
+                    available_slots.append((begin.strftime("%H:%M"), busy_start.strftime("%H:%M")))
+                begin = busy_end
+            # Check if there's time left after last busy slot
+            if begin < end:
+                available_slots.append((begin.strftime("%H:%M"), end.strftime("%H:%M")))
+            
+        return "Available time slots for visits: (make up a 30 minute interval from the list of available times) " + str(available_slots)
 
 server = AgentServer()
 
@@ -439,7 +445,7 @@ async def entrypoint(ctx: JobContext):
         "room": ctx.room.name,
     }
     session = AgentSession(
-        stt=deepgram.STT(model="nova-3", language="tr-TR"),
+        stt=deepgram.STT(model="nova-3", language="it-IT"),
         llm=openai.LLM(
             model="x-ai/grok-4-fast",
             base_url="https://openrouter.ai/api/v1",
@@ -447,8 +453,8 @@ async def entrypoint(ctx: JobContext):
         ),
         tts=lk_google.TTS(
             gender="female",
-            voice_name="tr-TR-Chirp3-HD-Laomedeia",
-            language="tr-TR"
+            voice_name="it-IT-Chirp3-HD-Achernar",
+            language="it-IT"
         ),
         turn_detection=MultilingualModel(),
         vad=ctx.proc.userdata["vad"],

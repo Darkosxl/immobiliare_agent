@@ -1,5 +1,5 @@
 venv
 .env
-livekit-agent-service-account.json
+tools/*
 __pycache__/
 add_geocoding.py
