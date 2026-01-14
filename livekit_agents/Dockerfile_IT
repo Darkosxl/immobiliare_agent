@@ -10,6 +10,7 @@ WORKDIR /app
 
 # Install system dependencies for audio processing and PostgreSQL
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
     libportaudio2 \
     libsndfile1 \
     libpq-dev \
