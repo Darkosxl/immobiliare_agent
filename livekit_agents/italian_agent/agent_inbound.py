@@ -12,6 +12,7 @@
 import logging
 import random
 from enum import Enum
+from utils import check_whitelisted
 from typing import Literal
 import os
 import json
@@ -21,12 +22,13 @@ from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from geopy.distance import geodesic
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel 
 from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
     ChatContext,
+    get_job_context,
     FunctionTool,
     JobContext,
     ModelSettings,
@@ -62,14 +64,20 @@ def get_google_token():
     return credentials.token
 #TODO check tool calls if they work
 #TODO add agent to push confused client into doing specific things
-class MyAgent(Agent):
+class RealEstateItalianAgent(Agent):
     def __init__(self) -> None:
         super().__init__(
             instructions=SYSTEM_PROMPT
         )
 
     async def on_enter(self):
+        #TODO PROPER SPAM CALL CHECK
+        if not await check_whitelisted(self.session.room.name):
+            await self.session.generate_reply("Mi dispiace, non posso assisterti")
+            await self.end_call()
+            return
         self.session.generate_reply(allow_interruptions=False)
+
     
     @function_tool
     async def schedule_meeting(
@@ -245,7 +253,7 @@ class MyAgent(Agent):
     #            excluded_tags=["img", "video", "source", "picture", "iframe", "svg"],
     #        )
 
-    #TODO IMPLEMENT ALL GOOGLE TOOL CALLS HERE
+   
     @function_tool 
     async def end_call(self, ctx: RunContext):
         """Called when the user wants to end the call"""
@@ -254,6 +262,8 @@ class MyAgent(Agent):
         await ctx.wait_for_playout()
         await self.hangup()
     
+            
+            
     @function_tool()
     async def get_existing_bookings(self, ctx: RunContext, date: str):
 
@@ -476,7 +486,7 @@ async def entrypoint(ctx: JobContext):
     #TODO THE CHAT ROOM SHOULD BE FROM OUR FLYNUMBER, MAKE SURE THAT WORKS AND
     # UNDERSTAND DEEPLY HOW IT DOES
     await session.start(
-        agent=MyAgent(),
+        agent=RealEstateItalianAgent(),
         room=ctx.room,
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
