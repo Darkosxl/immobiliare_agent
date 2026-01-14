@@ -28,5 +28,5 @@ COPY italian_agent/ ./italian_agent/
 # The .env file should be mounted at runtime or use environment variables
 # Example: docker run --env-file .env ...
 
-# LiveKit agents run via CLI
-CMD ["python", "-m", "livekit.agents", "start", "italian_agent.agent_inbound"]
+# Run the agent directly (v1.x SDK pattern)
+CMD ["python", "-m", "italian_agent.agent_inbound", "start"]
