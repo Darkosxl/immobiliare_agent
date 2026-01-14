@@ -513,12 +513,12 @@ async def entrypoint(ctx: JobContext):
     }
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
-        llm=openai.LLM(
-           model="x-ai/grok-4-fast",
-            base_url="https://openrouter.ai/api/v1",
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-        )
-        #groq.LLM(model="moonshotai/kimi-k2-instruct-0905")
+        #llm=openai.LLM(
+        #   model="x-ai/grok-4-fast",
+        #    base_url="https://openrouter.ai/api/v1",
+        #    api_key=os.getenv("OPENROUTER_API_KEY"),
+        #)
+        llm=groq.LLM(model="moonshotai/kimi-k2-instruct-0905")
         ,
         tts=lk_google.TTS(
             gender="female",
