@@ -47,6 +47,12 @@ def init_db():
                 latitude REAL,
                 longitude REAL
             )''')
+            
+            # Whitelist table for phone numbers
+            c.execute('''CREATE TABLE IF NOT EXISTS whitelist (
+                phone_number TEXT PRIMARY KEY,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )''')
             conn.commit()
             
             # Check if empty and add dummy data for testing
@@ -116,6 +122,57 @@ def getAllListingsWithCoords():
                 return [dict(row) for row in rows]
             except Exception as e:
                 print(f"Error fetching listings with coords: {e}")
+                return []
+
+# ===== WHITELIST FUNCTIONS =====
+
+def is_whitelisted(phone_number: str) -> bool:
+    """Check if a phone number is in the whitelist"""
+    with get_connection() as conn:
+        with conn.cursor() as c:
+            try:
+                c.execute("SELECT 1 FROM whitelist WHERE phone_number = %s", (phone_number,))
+                return c.fetchone() is not None
+            except Exception as e:
+                print(f"Error checking whitelist: {e}")
+                return False
+
+def add_to_whitelist(phone_number: str) -> bool:
+    """Add a phone number to the whitelist"""
+    with get_connection() as conn:
+        with conn.cursor() as c:
+            try:
+                c.execute(
+                    "INSERT INTO whitelist (phone_number) VALUES (%s) ON CONFLICT DO NOTHING",
+                    (phone_number,)
+                )
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error adding to whitelist: {e}")
+                return False
+
+def remove_from_whitelist(phone_number: str) -> bool:
+    """Remove a phone number from the whitelist"""
+    with get_connection() as conn:
+        with conn.cursor() as c:
+            try:
+                c.execute("DELETE FROM whitelist WHERE phone_number = %s", (phone_number,))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error removing from whitelist: {e}")
+                return False
+
+def get_all_whitelisted() -> list:
+    """Get all whitelisted phone numbers"""
+    with get_connection() as conn:
+        with conn.cursor() as c:
+            try:
+                c.execute("SELECT phone_number FROM whitelist")
+                return [row[0] for row in c.fetchall()]
+            except Exception as e:
+                print(f"Error fetching whitelist: {e}")
                 return []
 
 # Initialize database on module import

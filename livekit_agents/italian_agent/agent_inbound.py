@@ -103,8 +103,7 @@ class RealEstateItalianAgent(Agent):
             )
         )
     async def _check_whitelisted(self) -> bool:
-        """Check if caller is whitelisted (NOT a function_tool - runs automatically)"""
-        # Use get_job_context() to access the room - AgentSession doesn't have .room directly
+        """Check if caller is whitelisted using the database"""
         job_ctx = get_job_context()
         room_name = job_ctx.room.name if job_ctx.room else ""
         phone_number = "Unknown"
@@ -114,16 +113,12 @@ class RealEstateItalianAgent(Agent):
             if len(parts) >= 2:
                 phone_number = parts[1]
         
-        whitelist_path = os.getenv("WHITELIST")
-        if not whitelist_path:
+        # If no whitelist entries exist, allow all (not configured)
+        all_whitelisted = db.get_all_whitelisted()
+        if not all_whitelisted:
             return True
         
-        
-        with open(whitelist_path) as file:
-            for line in file:
-                if phone_number in line.strip():
-                    return True
-        return False
+        return db.is_whitelisted(phone_number)
 
 
 
