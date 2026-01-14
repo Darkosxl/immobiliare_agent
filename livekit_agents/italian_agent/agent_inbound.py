@@ -509,7 +509,7 @@ async def entrypoint(ctx: JobContext):
     }
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
-        llm=groq.LLM(model="kimi-k2-instruct")
+        llm=groq.LLM(model="moonshotai/kimi-k2-instruct-0905")
         #openai.LLM(
         #   model="x-ai/grok-4-fast",
         #    base_url="https://openrouter.ai/api/v1",
