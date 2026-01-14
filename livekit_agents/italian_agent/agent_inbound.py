@@ -104,11 +104,14 @@ class RealEstateItalianAgent(Agent):
 
     async def hangup(self):
         job_ctx = get_job_context()
-        await job_ctx.api.room.delete_room(
-            api.DeleteRoomRequest(
-                room=job_ctx.room.name,
+        try:
+            await job_ctx.api.room.delete_room(
+                api.DeleteRoomRequest(
+                    room=job_ctx.room.name,
+                )
             )
-        )
+        except Exception as e:
+            logger.warning(f"Could not delete room (may already be deleted): {e}")
     async def _check_whitelisted(self) -> bool:
         """Check if caller is whitelisted using the database"""
         job_ctx = get_job_context()

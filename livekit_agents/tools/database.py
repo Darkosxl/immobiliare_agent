@@ -128,11 +128,16 @@ def getAllListingsWithCoords():
 
 def is_whitelisted(phone_number: str) -> bool:
     """Check if a phone number is in the whitelist"""
+    # Normalize: just compare digits (strip +)
+    normalized = phone_number.lstrip("+")
     with get_connection() as conn:
         with conn.cursor() as c:
             try:
-                c.execute("SELECT 1 FROM whitelist WHERE phone_number = %s", (phone_number,))
-                return c.fetchone() is not None
+                c.execute("SELECT phone_number FROM whitelist")
+                for row in c.fetchall():
+                    if row[0].lstrip("+") == normalized:
+                        return True
+                return False
             except Exception as e:
                 print(f"Error checking whitelist: {e}")
                 return False
