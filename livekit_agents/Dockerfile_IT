@@ -1,32 +1,57 @@
+# Italian LiveKit Agent Dockerfile
+# syntax=docker/dockerfile:1
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim
 
+# Prevents Python from writing pyc files.
+ENV PYTHONDONTWRITEBYTECODE=1
 
+# Keeps Python from buffering stdout and stderr to avoid situations where
+# the application crashes without emitting any logs due to buffering.
+ENV PYTHONUNBUFFERED=1
 
-
-# Simple Dockerfile for Italian LiveKit Agent
-FROM python:3.12-slim
-
-# Set working directory
-WORKDIR /app
+# Create a non-privileged user that the app will run under.
+ARG UID=10001
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/home/appuser" \
+    --shell "/sbin/nologin" \
+    --uid "${UID}" \
+    appuser
 
 # Install system dependencies for audio processing and PostgreSQL
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    python3-dev \
     libglib2.0-0 \
     libportaudio2 \
     libsndfile1 \
     libpq-dev \
-    gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+USER appuser
+
+RUN mkdir -p /home/appuser/.cache
+RUN chown -R appuser /home/appuser/.cache
+
+WORKDIR /home/appuser
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --user --no-cache-dir -r requirements.txt
 
 # Copy the application code
 COPY tools/ ./tools/
 COPY italian_agent/ ./italian_agent/
 
+# Download required model files (turn detector ONNX model, Silero VAD, etc.)
+RUN python italian_agent/agent_inbound.py download-files
+
 # The .env file should be mounted at runtime or use environment variables
 # Example: docker run --env-file .env ...
 
-# Run the agent directly (v1.x SDK pattern)
-CMD ["python", "-m", "italian_agent.agent_inbound", "start"]
+# Run the application
+ENTRYPOINT ["python", "italian_agent/agent_inbound.py"]
+CMD ["start"]
