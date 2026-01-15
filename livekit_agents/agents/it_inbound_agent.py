@@ -45,7 +45,7 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools import database as db
-from italian_agent.system_prompt import SYSTEM_PROMPT
+from italian_agent.inbound_prompt import SYSTEM_PROMPT
 from datetime import datetime, timedelta, timezone as tz
 import tempfile
 
