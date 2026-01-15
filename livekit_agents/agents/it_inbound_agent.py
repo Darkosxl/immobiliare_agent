@@ -606,7 +606,12 @@ async def entrypoint(ctx: JobContext):
         #    base_url="https://openrouter.ai/api/v1",
         #    api_key=os.getenv("OPENROUTER_API_KEY"),
         #)
-        llm=lk_google.LLM(model="gemini-3.0-flash")
+        llm=lk_google.LLM(
+            model="gemini-3.0-flash",
+            vertexai=True,
+            project="ancient-medium-454210-t1",
+            location="us-central1"
+        )
         ,
         tts=lk_google.TTS(
             gender="female",
