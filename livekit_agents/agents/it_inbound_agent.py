@@ -143,6 +143,7 @@ class RealEstateItalianAgent(Agent):
             date (str): The date of the appointment
             
         """
+        logger.info(f"🚀 TOOL: schedule_meeting | address={apartment_address}, date={date}")
         # Extract phone number from room name (format: call-_393517843713_...)
         room_name = context.session.room.name if context.session.room else ""
         phone_number = "Unknown"
@@ -178,8 +179,9 @@ class RealEstateItalianAgent(Agent):
         response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
         if response.status_code != 200:
             logger.error(f"Failed to create calendar event: {response.text}")
-        # Always return success message to avoid confusing the voice AI
-        return f"Appuntamento confermato per {apartment_address}"
+        result = f"Appuntamento confermato per {apartment_address}"
+        logger.info(f"✅ TOOL RESULT: schedule_meeting | {result}")
+        return result
 
         
 
@@ -196,6 +198,8 @@ class RealEstateItalianAgent(Agent):
                    zone/neighborhood/address, budget, number of rooms, any other preferences.
                    Example: "Cliente vuole comprare appartamento residenziale zona Porta Romana, budget 200mila euro, 2-3 camere"
         """
+        
+        logger.info(f"🚀🚀🚀 TOOL CALLED: get_apartment_info with query: {query}")
         
         # Speak a filler phrase while processing (chosen randomly for variation)
         filler_phrases = [
@@ -392,9 +396,10 @@ Output only the listing name(s), nothing else."""
         Args:
             reason: Why the call is ending (optional, defaults to user_requested)
         """
-        logger.info(f"ending the call: {reason}")
+        logger.info(f"🚀 TOOL: end_call | reason={reason}")
         await ctx.wait_for_playout()
         await self.hangup()
+        logger.info(f"✅ TOOL RESULT: end_call | call ended")
     
             
             
@@ -406,6 +411,7 @@ Output only the listing name(s), nothing else."""
         Args:
             date (str): The date of the appointment
         """
+        logger.info(f"🚀 TOOL: get_existing_bookings | date={date}")
         start_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
         end_date = start_date + timedelta(minutes=30)
         token = get_google_token()
@@ -430,7 +436,9 @@ Output only the listing name(s), nothing else."""
                 event_times.append(events["start"]["dateTime"])
         for i in range(len(event_summaries)):
             event_summaries[i] = event_summaries[i] + " at " + event_times[i]
-        return "all events on this time: " + (", ").join(event_summaries)   
+        result = "all events on this time: " + (", ").join(event_summaries)
+        logger.info(f"✅ TOOL RESULT: get_existing_bookings | {result}")
+        return result
 
 
 
@@ -441,6 +449,7 @@ Output only the listing name(s), nothing else."""
         Args:
             date (str): The date of the appointment
         """
+        logger.info(f"🚀 TOOL: cancel_booking | date={date}")
         start_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
         end_date = start_date + timedelta(minutes=30)
         token = get_google_token()
@@ -482,7 +491,7 @@ Output only the listing name(s), nothing else."""
         Args:
             date (str): The date of the appointment
         """
-        
+        logger.info(f"🚀 TOOL: check_available_slots | date={date}")
         base_date = datetime.fromisoformat(date).replace(tzinfo=tz(timedelta(hours=1)))
         start_10 = base_date.replace(hour=10, minute=0, second=0, microsecond=0)
         end_1230 = base_date.replace(hour=12, minute=30, second=0, microsecond=0)
@@ -574,7 +583,9 @@ Output only the listing name(s), nothing else."""
             if begin < end:
                 available_slots.append((begin.strftime("%H:%M"), end.strftime("%H:%M")))
             
-        return "Available time slots for visits: (make up a 30 minute interval from the list of available times) " + str(available_slots)
+        result = "Available time slots for visits: (make up a 30 minute interval from the list of available times) " + str(available_slots)
+        logger.info(f"✅ TOOL RESULT: check_available_slots | {result}")
+        return result
 
 server = AgentServer()
 
