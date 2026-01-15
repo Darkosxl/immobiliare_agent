@@ -43,6 +43,7 @@ google-cloud-texttospeech==2.33.0
 google-genai==1.56.0
 googleapis-common-protos==1.72.0
 greenlet==3.3.0
+groq==1.0.0
 grpcio==1.76.0
 grpcio-status==1.76.0
 h11==0.16.0
