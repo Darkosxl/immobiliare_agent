@@ -69,15 +69,47 @@ def init_db():
                 conn.commit()
                 print("Initialized database with dummy data")
 
-def getCurrentListings(Real_Estate_Agency=None):
-    """Get all listing names, optionally filtered by agency"""
+def getCurrentListings(Real_Estate_Agency=None, property_type="living", listing_type="rent"):
+    """Get all listing names, optionally filtered by agency, property type, and listing type.
+    
+    Args:
+        Real_Estate_Agency: Filter by agency name (optional)
+        property_type: "living" (apartments, lofts, etc.) or "commercial" (offices, shops)
+        listing_type: "rent" or "sale"
+    """
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as c:
             try:
-                if Real_Estate_Agency:
-                    c.execute("SELECT name FROM listings WHERE agency = %s", (Real_Estate_Agency,))
+                if property_type == "living":
+                    # Exclude offices and commercial properties
+                    if Real_Estate_Agency:
+                        c.execute("""
+                            SELECT name FROM listings 
+                            WHERE agency = %s 
+                            AND property_type NOT IN ('office', 'commercial') 
+                            AND listing_type = %s
+                        """, (Real_Estate_Agency, listing_type))
+                    else:
+                        c.execute("""
+                            SELECT name FROM listings 
+                            WHERE property_type NOT IN ('office', 'commercial') 
+                            AND listing_type = %s
+                        """, (listing_type,))
                 else:
-                    c.execute("SELECT name FROM listings")
+                    # Commercial properties (offices, shops, etc.)
+                    if Real_Estate_Agency:
+                        c.execute("""
+                            SELECT name FROM listings 
+                            WHERE agency = %s 
+                            AND property_type IN ('office', 'commercial') 
+                            AND listing_type = %s
+                        """, (Real_Estate_Agency, listing_type))
+                    else:
+                        c.execute("""
+                            SELECT name FROM listings 
+                            WHERE property_type IN ('office', 'commercial') 
+                            AND listing_type = %s
+                        """, (listing_type,))
                 rows = c.fetchall()
                 
                 if not rows:
@@ -87,6 +119,7 @@ def getCurrentListings(Real_Estate_Agency=None):
             except Exception as e:
                 print(f"Error fetching listings: {e}")
                 return "Error fetching listings"
+
 
 def getListing(listing_name):
     """Get a single listing by name"""

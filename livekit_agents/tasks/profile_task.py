@@ -1,10 +1,9 @@
 from livekit.agents import AgentTask, function_tool
 from livekit.agents.beta.workflows import TaskGroup
 from dataclasses import dataclass
-
+from ../prompts/it_inbound_prompt.py import BASE_IDENTITY
 #WHITELIST NUMBERS TASK, SPECIFICALLY FOR TESTING (ONE MUST ALSO ADD A PROBER SPAM CALL CHECK AS A TASK)
 
-@dataclass
 @dataclass
 class ClientProfile:
     phone_number: str #the phone number of the client
@@ -16,7 +15,7 @@ class ClientProfile:
 class ClientRoleTask(AgentTask[ClientProfile]):
     def __init__(self, chat_ctx=None):
         super().__init__(
-            instructions="""Determine if the caller is a landlord, a tenant (someone looking to rent) 
+            instructions= BASE_IDENTITY + """TASK: Determine if the caller is a landlord, a tenant (someone looking to rent) 
             or a potential buyer. Be polite, talk simple and professional.""",
             chat_ctx=chat_ctx,    
         )
@@ -41,7 +40,7 @@ class ClientRoleTask(AgentTask[ClientProfile]):
         """Use this if the client is a buyer"""
         self._profile["role"] = "buyer"
     
-
+   
 
 
 
