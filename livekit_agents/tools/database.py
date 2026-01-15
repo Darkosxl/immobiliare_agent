@@ -85,7 +85,7 @@ def getCurrentListings(Real_Estate_Agency=None, property_type="living", listing_
                     if Real_Estate_Agency:
                         c.execute("""
                             SELECT name FROM listings 
-                            WHERE agency = %s 
+                            WHERE agency ILIKE %s 
                             AND property_type NOT IN ('office', 'commercial') 
                             AND listing_type = %s
                         """, (Real_Estate_Agency, listing_type))
@@ -100,7 +100,7 @@ def getCurrentListings(Real_Estate_Agency=None, property_type="living", listing_
                     if Real_Estate_Agency:
                         c.execute("""
                             SELECT name FROM listings 
-                            WHERE agency = %s 
+                            WHERE agency ILIKE %s 
                             AND property_type IN ('office', 'commercial') 
                             AND listing_type = %s
                         """, (Real_Estate_Agency, listing_type))

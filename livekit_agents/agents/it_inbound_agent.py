@@ -17,6 +17,7 @@ import os
 import json
 import requests
 import google.auth
+from groq import Groq
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from geopy.distance import geodesic
@@ -43,7 +44,7 @@ from livekit.agents import room_io, metrics
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from tools import database as db
-from prompts.it_inbound_prompt import SYSTEM_PROMPT
+from prompts.it_inbound_prompt import SYSTEM_PROMPT, immobiliare_agenzia
 from datetime import datetime, timedelta, timezone as tz
 import tempfile
 
@@ -184,7 +185,9 @@ class RealEstateItalianAgent(Agent):
 
     @function_tool
     async def get_apartment_info(
-        self, context: RunContext, apartment_address: str
+        self, context: RunContext, apartment_address: str, 
+        listing_type: Literal["sale", "rent"] = "rent", 
+        property_type: Literal["living", "commercial"] = "living"
     ):
         
         response_openstreetmap = requests.get(
@@ -200,19 +203,18 @@ class RealEstateItalianAgent(Agent):
         
         # 2. If geocoding failed, use LLM to match listing name
         if not geo_data: 
-            listings = db.getCurrentListings()
-            response = requests.post(
-                url="https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": "Bearer " + os.getenv("OPENROUTER_API_KEY"),
-                    "HTTP-Referer": "https://rinova.capmapai.com",
-                    "X-Title": "Rinova AI",
-                },
-                data=json.dumps({
-                "model": "google/gemini-3-flash-preview",
-                    "messages": [
-                        {
-                            "role": "user",
+            # Use imported agency name and function args
+            listings = db.getCurrentListings(
+                Real_Estate_Agency=immobiliare_agenzia, 
+                property_type=property_type, 
+                listing_type=listing_type
+            )
+            client = Groq()
+            completion = client.chat.completion.create(
+                model="moonshotai/kimi-k2-instruct-0905",
+                messages=[
+                {
+                    "role": "user",
                             "content": f"""You are AItaxonomy, a real estate mapping assistant.
                             You have these listings: {listings}
                             The user asked about: "{apartment_address}"
@@ -222,12 +224,17 @@ class RealEstateItalianAgent(Agent):
                             - If no match, output 3 random listing names from the list, separated by commas.
                             
                             Output only the listing name(s), nothing else."""
-                        }
-                    ],
-                })
+                }
+                ],
+                temperature=0.1,
+                max_completion_tokens=8192,
+                top_p=1,
+                stream=False,
+                stop=None
             )
-            data = response.json()
-            listing_names = data['choices'][0]['message']['content']
+            
+            data = completion.choices[0].message
+            listing_names = data
             
             # If multiple listings returned (no match), return suggestions
             if "," in listing_names:
