@@ -606,7 +606,11 @@ async def entrypoint(ctx: JobContext):
         #    base_url="https://openrouter.ai/api/v1",
         #    api_key=os.getenv("OPENROUTER_API_KEY"),
         #)
-        llm=groq.LLM(model="moonshotai/kimi-k2-instruct-0905")
+        llm=openai.LLM(
+            model="kimi-k2-thinking",
+            base_url="https://api.moonshot.ai/v1",
+            api_key=os.getenv("MOONSHOT_API_KEY"),
+        )
         ,
         tts=lk_google.TTS(
             gender="female",
