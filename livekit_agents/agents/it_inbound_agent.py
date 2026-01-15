@@ -83,8 +83,7 @@ def get_google_token():
     
     credentials.refresh(Request())
     return credentials.token
-#TODO check tool calls if they work
-#TODO add agent to push confused client into doing specific things
+
 class RealEstateItalianAgent(Agent):
     def __init__(self) -> None:
         super().__init__(
