@@ -186,35 +186,75 @@ class RealEstateItalianAgent(Agent):
     @function_tool
     async def get_apartment_info(
         self, context: RunContext,
-        apartment_address: str | None = None,
-        listing_type: Literal["sale", "rent"] = "rent", 
-        property_type: Literal["living", "commercial"] = "living",
-        budget: int | None = None
+        query: str
     ):
-        """Search for apartments by zone/address, budget, or get suggestions.
+        """Search for apartments based on the caller's requirements.
         
         Args:
-            apartment_address: Zone, neighborhood, or address (e.g., "Porta Romana", "via Garibaldi"). Optional.
-            listing_type: "sale" or "rent"
-            property_type: "living" or "commercial"  
-            budget: Maximum budget in euros. Optional.
+            query: Natural language description of what the caller is looking for.
+                   Include ALL relevant context: buyer or renter, residential or commercial,
+                   zone/neighborhood/address, budget, number of rooms, any other preferences.
+                   Example: "Cliente vuole comprare appartamento residenziale zona Porta Romana, budget 200mila euro, 2-3 camere"
         """
         
-        # Case 1: No address provided - return suggestions based on filters
-        if not apartment_address:
+        # Speak a filler phrase while processing (chosen randomly for variation)
+        filler_phrases = [
+            "Verifico subito.",
+            "Controllo i dati.",
+            "Un attimo, cerco le informazioni.",
+            "Vediamo cosa abbiamo.",
+        ]
+        await context.session.generate_reply(
+            instructions=f"Say exactly this and nothing else: {random.choice(filler_phrases)}",
+            allow_interruptions=False
+        )
+        
+        # Step 1: Use a smart LLM to extract structured parameters from the query
+        client = Groq()
+        extraction = client.chat.completions.create(
+            model="moonshotai/kimi-k2-instruct-0905",  # Smart model for extraction
+            messages=[{
+                "role": "user",
+                "content": f"""Extract search parameters from this real estate query. Output ONLY valid JSON, nothing else.
+
+                Query: "{query}"
+
+                Extract these fields (use null if not mentioned):
+                - zone: string (neighborhood, area, or address)
+                - listing_type: "sale" or "rent"  
+                - property_type: "living" or "commercial"
+                - budget: integer (in euros, convert "200mila" to 200000)
+                - rooms: integer (number of rooms/bedrooms)
+
+                JSON output:"""
+            }],
+            temperature=0,
+            max_completion_tokens=600
+        )
+        
+        try:
+            params = json.loads(extraction.choices[0].message.content.strip())
+        except json.JSONDecodeError:
+            # Fallback: just use the query as zone
+            params = {"zone": query, "listing_type": "rent", "property_type": "living", "budget": None, "rooms": None}
+        
+        logger.info(f"🔍 Extracted params: {params}")
+        
+        zone = params.get("zone")
+        budget = params.get("budget")
+        
+        # Step 2: If no zone provided, return suggestions based on other filters
+        if not zone:
             listings = db.getAllListingsWithCoords()
             
-            # Filter by budget if provided
             if budget:
                 listings = [l for l in listings if l.get('price', 0) <= budget]
             
-            # If no listings match, just get all
             if not listings:
                 listings = db.getAllListingsWithCoords()[:5]
             else:
                 listings = listings[:5]
             
-            # Categorize by size for natural suggestions
             return json.dumps({
                 "status": "suggestions",
                 "message": "Ecco alcune proposte",
@@ -229,11 +269,11 @@ class RealEstateItalianAgent(Agent):
                 ]
             })
         
-        # Case 2: Address/zone provided - try geocoding
+        # Step 3: Zone provided - try geocoding
         response_openstreetmap = requests.get(
             url="https://nominatim.openstreetmap.org/search",
             params={
-                "q": f"{apartment_address}, Milano, Italia",
+                "q": f"{zone}, Milano, Italia",
                 "format": "json",
                 "limit": 1
             },
@@ -241,13 +281,12 @@ class RealEstateItalianAgent(Agent):
         )        
         geo_data = response_openstreetmap.json()
         
-        # Case 2a: Geocoding failed - use LLM to match listing name
+        # Step 3a: Geocoding failed - use LLM to match listing name
         if not geo_data: 
-            # Use imported agency name and function args
             listings = db.getCurrentListings(
                 Real_Estate_Agency=immobiliare_agenzia, 
-                property_type=property_type, 
-                listing_type=listing_type
+                property_type=params.get("property_type", "living"), 
+                listing_type=params.get("listing_type", "rent")
             )
             client = Groq()
             completion = client.chat.completions.create(
@@ -255,22 +294,18 @@ class RealEstateItalianAgent(Agent):
                 messages=[
                 {
                     "role": "user",
-                            "content": f"""You are AItaxonomy, a real estate mapping assistant.
-                            You have these listings: {listings}
-                            The user asked about: "{apartment_address}"
-                            
-                            Your task: Find the best matching listing name.
-                            - If you find a match, output ONLY the listing name.
-                            - If no match, output 3 random listing names from the list, separated by commas.
-                            
-                            Output only the listing name(s), nothing else."""
-                }
-                ],
+                    "content": f"""You are a real estate matching assistant.
+Available listings: {listings}
+User is looking for: "{zone}"
+
+Find the best matching listing name.
+- If you find a match, output ONLY the listing name.
+- If no match, output 3 listing names from the list, separated by commas.
+
+Output only the listing name(s), nothing else."""
+                }],
                 temperature=0.1,
-                max_completion_tokens=8192,
-                top_p=1,
-                stream=False,
-                stop=None
+                max_completion_tokens=1000
             )
             
             listing_names = completion.choices[0].message.content
@@ -282,19 +317,18 @@ class RealEstateItalianAgent(Agent):
                     "suggestions": [name.strip() for name in listing_names.split(",")]
                 })
             
-            # Single match found - try to get it, or return all listings as suggestions
+            # Single match found
             listing = db.getListing(listing_names.strip())
             if listing:
                 return listing.json()
             else:
-                # Fallback: return all available listings
                 all_listings = db.getCurrentListings()
                 return json.dumps({
                     "status": "suggestions",
                     "suggestions": [name.strip() for name in all_listings.split(",")[:3]]
                 })
 
-        # 3. Geocoding succeeded - find closest listings by distance
+        # Step 4: Geocoding succeeded - find closest listings by distance
         user_coords = (float(geo_data[0]["lat"]), float(geo_data[0]["lon"]))
         
         listings = db.getAllListingsWithCoords()
