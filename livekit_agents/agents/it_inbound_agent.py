@@ -42,10 +42,8 @@ from livekit.plugins import openai, silero, google as lk_google, deepgram, noise
 from livekit.agents import room_io, metrics
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tools import database as db
-from italian_agent.inbound_prompt import SYSTEM_PROMPT
+from prompts.it_inbound_prompt import SYSTEM_PROMPT
 from datetime import datetime, timedelta, timezone as tz
 import tempfile
 

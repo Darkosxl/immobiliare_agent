@@ -42,16 +42,16 @@ WORKDIR /home/appuser
 COPY requirements.txt .
 RUN python -m pip install --user --no-cache-dir -r requirements.txt
 
-# Copy the application code
+
 COPY tools/ ./tools/
-COPY italian_agent/ ./italian_agent/
+COPY agents/ ./agents/
+COPY prompts/ ./prompts/
+COPY tasks/ ./tasks/
 
-# Download required model files (turn detector ONNX model, Silero VAD, etc.)
-RUN python italian_agent/agent_inbound.py download-files
 
-# The .env file should be mounted at runtime or use environment variables
-# Example: docker run --env-file .env ...
+ENV PYTHONPATH="/home/appuser"
 
-# Run the application
-ENTRYPOINT ["python", "italian_agent/agent_inbound.py"]
+RUN python agents/it_inbound_agent.py download-files
+
+ENTRYPOINT ["python", "agents/it_inbound_agent.py"]
 CMD ["start"]

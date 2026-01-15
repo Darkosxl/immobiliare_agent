@@ -1,7 +1,10 @@
 from livekit.agents import AgentTask, function_tool
 from livekit.agents.beta.workflows import TaskGroup
 from dataclasses import dataclass
-from ../prompts/it_inbound_prompt.py import BASE_IDENTITY
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from prompts.it_inbound_prompt import BASE_IDENTITY
 #WHITELIST NUMBERS TASK, SPECIFICALLY FOR TESTING (ONE MUST ALSO ADD A PROBER SPAM CALL CHECK AS A TASK)
 
 @dataclass
