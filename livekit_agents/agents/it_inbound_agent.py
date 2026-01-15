@@ -607,7 +607,7 @@ async def entrypoint(ctx: JobContext):
         #    api_key=os.getenv("OPENROUTER_API_KEY"),
         #)
         llm=openai.LLM(
-            model="kimi-k2-thinking",
+            model="kimi-k2-0905-preview",
             base_url="https://api.moonshot.ai/v1",
             api_key=os.getenv("MOONSHOT_API_KEY"),
         )
