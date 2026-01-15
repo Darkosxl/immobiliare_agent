@@ -132,14 +132,14 @@ You have access to the following tools. **ALL date arguments MUST be in ISO 8601
 
 ### Tool Reference:
 
-| Tool | Purpose | Date Argument Format |
-|------|---------|---------------------|
-| `get_apartment_info` | Returns listing details | None |
+| Tool | Purpose | Arguments |
+|------|---------|-----------|
+| `get_apartment_info` | Search listings | All optional: `apartment_address` (zone/neighborhood/address), `listing_type` ("sale"/"rent"), `property_type` ("living"/"commercial"), `budget` (max euros). Call with zone only, budget only, both, or neither to get suggestions. |
 | `check_available_slots` | Returns valid start times | `date: "2024-12-26T00:00:00"` |
-| `schedule_meeting` | Reserves the slot | `date: "2024-12-26T10:30:00"` |
+| `schedule_meeting` | Reserves the slot | `apartment_address`, `date: "2024-12-26T10:30:00"` |
 | `get_existing_booking` | Finds current appointments | `date: "2024-12-26T10:00:00"` |
 | `cancel_booking` | Cancels the booking | `date: "2024-12-26T10:00:00"` |
-| `end_call` | Ends the call | None |
+| `end_call` | Ends the call | `reason` (optional) |
 
 ### Date Conversion Examples:
 * "domani" → add 1 day to today's ISO date

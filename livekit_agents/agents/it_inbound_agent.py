@@ -185,11 +185,51 @@ class RealEstateItalianAgent(Agent):
 
     @function_tool
     async def get_apartment_info(
-        self, context: RunContext, apartment_address: str, 
+        self, context: RunContext,
+        apartment_address: str | None = None,
         listing_type: Literal["sale", "rent"] = "rent", 
-        property_type: Literal["living", "commercial"] = "living"
+        property_type: Literal["living", "commercial"] = "living",
+        budget: int | None = None
     ):
+        """Search for apartments by zone/address, budget, or get suggestions.
         
+        Args:
+            apartment_address: Zone, neighborhood, or address (e.g., "Porta Romana", "via Garibaldi"). Optional.
+            listing_type: "sale" or "rent"
+            property_type: "living" or "commercial"  
+            budget: Maximum budget in euros. Optional.
+        """
+        
+        # Case 1: No address provided - return suggestions based on filters
+        if not apartment_address:
+            listings = db.getAllListingsWithCoords()
+            
+            # Filter by budget if provided
+            if budget:
+                listings = [l for l in listings if l.get('price', 0) <= budget]
+            
+            # If no listings match, just get all
+            if not listings:
+                listings = db.getAllListingsWithCoords()[:5]
+            else:
+                listings = listings[:5]
+            
+            # Categorize by size for natural suggestions
+            return json.dumps({
+                "status": "suggestions",
+                "message": "Ecco alcune proposte",
+                "listings": [
+                    {
+                        "name": l['name'],
+                        "address": l['address'],
+                        "price": l['price'],
+                        "rooms": l.get('rooms', 'N/A'),
+                        "description": l.get('description', '')[:150]
+                    } for l in listings
+                ]
+            })
+        
+        # Case 2: Address/zone provided - try geocoding
         response_openstreetmap = requests.get(
             url="https://nominatim.openstreetmap.org/search",
             params={
@@ -201,7 +241,7 @@ class RealEstateItalianAgent(Agent):
         )        
         geo_data = response_openstreetmap.json()
         
-        # 2. If geocoding failed, use LLM to match listing name
+        # Case 2a: Geocoding failed - use LLM to match listing name
         if not geo_data: 
             # Use imported agency name and function args
             listings = db.getCurrentListings(
@@ -210,7 +250,7 @@ class RealEstateItalianAgent(Agent):
                 listing_type=listing_type
             )
             client = Groq()
-            completion = client.chat.completion.create(
+            completion = client.chat.completions.create(
                 model="moonshotai/kimi-k2-instruct-0905",
                 messages=[
                 {
@@ -233,8 +273,7 @@ class RealEstateItalianAgent(Agent):
                 stop=None
             )
             
-            data = completion.choices[0].message
-            listing_names = data
+            listing_names = completion.choices[0].message.content
             
             # If multiple listings returned (no match), return suggestions
             if "," in listing_names:
@@ -541,6 +580,11 @@ async def entrypoint(ctx: JobContext):
     def on_metrics(ev: MetricsCollectedEvent):
         metrics.log_metrics(ev.metrics)
         usage_collector.collect(ev.metrics)
+    
+    @session.on("function_calls_finished")
+    def on_tool_result(ev):
+        for call in ev.function_calls:
+            logger.info(f"🔧 Tool: {call.name} | Result: {call.result}")
     
     async def log_usage():
         summary = usage_collector.get_summary()
