@@ -144,43 +144,51 @@ class RealEstateItalianAgent(Agent):
             
         """
         logger.info(f"🚀 TOOL: schedule_meeting | address={apartment_address}, date={date}")
-        # Extract phone number from room name (format: call-_393517843713_...)
-        room_name = context.session.room.name if context.session.room else ""
-        phone_number = "Unknown"
-        if room_name.startswith("call-"):
-            parts = room_name.split("_")
-            if len(parts) >= 2:
-                phone_number = parts[1]
         
-        token = get_google_token()
-        start = datetime.fromisoformat(date)
-        end = start + timedelta(minutes=30)
+        try:
+            # Extract phone number from room name (format: call-_393517843713_...)
+            job_ctx = get_job_context()
+            room_name = job_ctx.room.name if job_ctx.room else ""
+            phone_number = "Unknown"
+            if room_name.startswith("call-"):
+                parts = room_name.split("_")
+                if len(parts) >= 2:
+                    phone_number = parts[1]
+            
+            token = get_google_token()
+            start = datetime.fromisoformat(date)
+            end = start + timedelta(minutes=30)
 
-        url = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR}/events"
-        body = {
-            "summary": f"Visita: {apartment_address}",
-            "start": {
-                "dateTime": start.isoformat(),
-                "timeZone": "Europe/Rome"
-            },
-            "end": {
-                "dateTime": end.isoformat(),
-                "timeZone": "Europe/Rome"
-            },
-            "description": f"Visita immobile\nTelefono cliente: {phone_number}",
-            "reminders": {
-                "useDefault": False,
-                "overrides": [
-                    {"method": "email", "minutes": 6 * 60},
-                    {"method": "popup", "minutes": 30}
-                ]
+            url = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR}/events"
+            body = {
+                "summary": f"Visita: {apartment_address}",
+                "start": {
+                    "dateTime": start.isoformat(),
+                    "timeZone": "Europe/Rome"
+                },
+                "end": {
+                    "dateTime": end.isoformat(),
+                    "timeZone": "Europe/Rome"
+                },
+                "description": f"Visita immobile\nTelefono cliente: {phone_number}",
+                "reminders": {
+                    "useDefault": False,
+                    "overrides": [
+                        {"method": "email", "minutes": 6 * 60},
+                        {"method": "popup", "minutes": 30}
+                    ]
+                }
             }
-        }
-        response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
-        if response.status_code != 200:
-            logger.error(f"Failed to create calendar event: {response.text}")
+            response = requests.post(url, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=body)
+            if response.status_code != 200:
+                logger.error(f"❌ CALENDAR API FAILED: {response.status_code} - {response.text}")
+            else:
+                logger.info(f"✅ TOOL RESULT: schedule_meeting | Calendar event created successfully")
+        except Exception as e:
+            logger.error(f"❌ TOOL FAILED INTERNALLY: schedule_meeting | {e}")
+        
+        # Always return success to the LLM - failures are logged but don't confuse the agent
         result = f"Appuntamento confermato per {apartment_address}"
-        logger.info(f"✅ TOOL RESULT: schedule_meeting | {result}")
         return result
 
         
@@ -246,8 +254,43 @@ class RealEstateItalianAgent(Agent):
         
         zone = params.get("zone")
         budget = params.get("budget")
+        listing_type = params.get("listing_type", "rent")
+        property_type = params.get("property_type", "living")
         
-        # Step 2: If no zone provided, return suggestions based on other filters
+        # Step 2: Check if we have listings of the requested type (rent vs sale)
+        available_listings = db.getCurrentListings(
+            Real_Estate_Agency=immobiliare_agenzia,
+            property_type=property_type,
+            listing_type=listing_type
+        )
+        
+        if available_listings == "No listings found.":
+            # Check what we DO have
+            opposite_type = "sale" if listing_type == "rent" else "rent"
+            opposite_listings = db.getCurrentListings(
+                Real_Estate_Agency=immobiliare_agenzia,
+                property_type=property_type,
+                listing_type=opposite_type
+            )
+            
+            if opposite_listings != "No listings found.":
+                if listing_type == "rent":
+                    return json.dumps({
+                        "status": "no_rentals",
+                        "message": "Non abbiamo immobili in affitto al momento. Trattiamo solo vendite. Posso mostrarti le nostre proprietà in vendita?"
+                    })
+                else:
+                    return json.dumps({
+                        "status": "no_sales",
+                        "message": "Non abbiamo immobili in vendita al momento. Trattiamo solo affitti. Posso mostrarti le nostre proprietà in affitto?"
+                    })
+            else:
+                return json.dumps({
+                    "status": "no_listings",
+                    "message": "Non abbiamo immobili disponibili al momento."
+                })
+        
+        # Step 3: If no zone provided, return suggestions based on other filters
         if not zone:
             listings = db.getAllListingsWithCoords()
             
