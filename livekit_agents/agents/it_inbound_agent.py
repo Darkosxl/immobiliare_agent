@@ -607,10 +607,10 @@ async def entrypoint(ctx: JobContext):
         #    api_key=os.getenv("OPENROUTER_API_KEY"),
         #)
         llm=lk_google.LLM(
-            model="gemini-3-flash-preview",
+            model="gemini-2.5-flash",
             vertexai=True,
             project="ancient-medium-454210-i1",
-            location="global"
+            location="us-central1"
         )
         ,
         tts=lk_google.TTS(
