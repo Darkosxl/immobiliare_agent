@@ -644,23 +644,26 @@ async def entrypoint(ctx: JobContext):
     }
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
-        #llm=openai.LLM(
-        #   model="x-ai/grok-4-fast",
-        #    base_url="https://openrouter.ai/api/v1",
-        #    api_key=os.getenv("OPENROUTER_API_KEY"),
-        #)
-        llm=lk_google.LLM(
-            model="gemini-2.5-flash",
-            vertexai=True,
-            project="ancient-medium-454210-i1",
-            location="us-central1"
+        llm=openai.LLM.with_x_ai(
+           model="grok-4-1-fast-reasoning",
         )
+        #llm=lk_google.LLM(
+        #    model="gemini-2.5-flash",
+        #    vertexai=True,
+        #  project="ancient-medium-454210-i1",
+        #    location="us-central1"
+        #)
         ,
-        tts=lk_google.TTS(
-            gender="female",
-            voice_name="it-IT-Chirp3-HD-Achernar",
-            language="it-IT"
-        ),
+        tts=elevenlabs.TTS(
+            voice_id="gfKKsLN1k0oYYN9n2dXX",#violetta
+            model="eleven_v3"
+        )
+        #lk_google.TTS(
+        #    gender="female",
+        #    voice_name="it-IT-Chirp3-HD-Achernar",
+        #    language="it-IT"
+        #)
+        ,
         turn_detection=MultilingualModel(),
         vad=ctx.proc.userdata["vad"],
         preemptive_generation=True,

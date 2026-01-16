@@ -58,6 +58,7 @@ humanize==4.15.0
 hyperframe==6.1.0
 idna==3.11
 importlib_metadata==8.7.1
+iniconfig==2.3.0
 Jinja2==3.1.6
 jiter==0.12.0
 jmespath==1.0.1
@@ -72,6 +73,7 @@ livekit-api==1.1.0
 livekit-blingfire==1.1.0
 livekit-plugins-cartesia==1.3.10
 livekit-plugins-deepgram==1.3.10
+livekit-plugins-elevenlabs==1.3.10
 livekit-plugins-google==1.3.10
 livekit-plugins-groq==1.3.10
 livekit-plugins-noise-cancellation==0.2.5
@@ -103,6 +105,7 @@ packaging==25.0
 patchright==1.56.0
 pillow==12.0.0
 playwright==1.57.0
+pluggy==1.6.0
 prometheus_client==0.23.1
 propcache==0.4.1
 proto-plus==1.27.0
@@ -118,6 +121,8 @@ pyee==13.0.0
 Pygments==2.19.2
 PyJWT==2.10.1
 pyOpenSSL==25.3.0
+pytest==9.0.2
+pytest-asyncio==0.24.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 PyYAML==6.0.3
