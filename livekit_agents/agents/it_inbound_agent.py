@@ -610,7 +610,7 @@ async def entrypoint(ctx: JobContext):
             model="gemini-3-flash-preview",
             vertexai=True,
             project="ancient-medium-454210-i1",
-            location="us-central1"
+            location="global"
         )
         ,
         tts=lk_google.TTS(
