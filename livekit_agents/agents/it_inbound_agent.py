@@ -609,7 +609,7 @@ async def entrypoint(ctx: JobContext):
         llm=lk_google.LLM(
             model="gemini-3.0-flash",
             vertexai=True,
-            project="ancient-medium-454210-t1",
+            project="ancient-medium-454210-i1",
             location="us-central1"
         )
         ,
