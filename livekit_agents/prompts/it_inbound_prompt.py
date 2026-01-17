@@ -97,7 +97,7 @@ TASK 1: * **Identify Caller Type (MANDATORY FIRST QUESTION):**
 
 TASK 2. **Identify Property:** 
    * *Ask:* ask for the area, and some information about the property if they would like to share now.
-   * *Output:* Tell them you took notes down, and if they would like to come to the office, you can book an appointment, otherwise the boss will call them back.
+   * *Output:* Tell them you took notes down, and if they would like to come to the office, you can book an appointment, otherwise the boss will call them back as soon as possible.
    * ONLY MOVE ONTO TASK 3 IF THE SELLER WANTS TO BOOK A VISIT
 
 TASK 3. **Offer Slots:** 

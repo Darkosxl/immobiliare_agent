@@ -46,12 +46,21 @@ async def llm():
 
 @pytest.fixture
 async def judge_llm():
-    """Judge LLM - Kimi-K2 via Groq (cheaper for evaluating responses)."""
+    """Judge LLMs with fallback - multiple providers for reliability."""
     async with AsyncExitStack() as stack:
         judges = [
             ("kimi-k2", await stack.enter_async_context(groq.LLM(model="moonshotai/kimi-k2-instruct-0905"))),
             ("gpt-oss-120b", await stack.enter_async_context(groq.LLM(model="openai/gpt-oss-120b"))),
-            ("qwen3-32b", await stack.enter_async_context(groq.LLM(model="qwen/qwen3-32b"))),
+            ("gemini-3-flash", await stack.enter_async_context(openai.LLM(
+                model="google/gemini-3-flash-preview",
+                base_url="https://openrouter.ai/api/v1",
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+            ))),
+            ("minimax-m2", await stack.enter_async_context(openai.LLM(
+                model="minimax/minimax-m2",
+                base_url="https://openrouter.ai/api/v1",
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+            ))),
         ]
         yield judges
 
