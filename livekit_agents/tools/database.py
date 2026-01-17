@@ -81,33 +81,48 @@ def getCurrentListings(Real_Estate_Agency=None, property_type="living", listing_
         with conn.cursor(cursor_factory=RealDictCursor) as c:
             try:
                 if property_type == "living":
-                    # Exclude offices and commercial properties
+                    # Exclude offices, commercial properties, and parking
                     if Real_Estate_Agency:
                         c.execute("""
-                            SELECT name FROM listings 
-                            WHERE agency ILIKE %s 
-                            AND property_type NOT IN ('office', 'commercial') 
+                            SELECT name FROM listings
+                            WHERE agency ILIKE %s
+                            AND property_type NOT IN ('office', 'commercial', 'parking')
                             AND listing_type = %s
                         """, (Real_Estate_Agency, listing_type))
                     else:
                         c.execute("""
-                            SELECT name FROM listings 
-                            WHERE property_type NOT IN ('office', 'commercial') 
+                            SELECT name FROM listings
+                            WHERE property_type NOT IN ('office', 'commercial', 'parking')
+                            AND listing_type = %s
+                        """, (listing_type,))
+                elif property_type == "parking":
+                    # Parking properties
+                    if Real_Estate_Agency:
+                        c.execute("""
+                            SELECT name FROM listings
+                            WHERE agency ILIKE %s
+                            AND property_type = 'parking'
+                            AND listing_type = %s
+                        """, (Real_Estate_Agency, listing_type))
+                    else:
+                        c.execute("""
+                            SELECT name FROM listings
+                            WHERE property_type = 'parking'
                             AND listing_type = %s
                         """, (listing_type,))
                 else:
                     # Commercial properties (offices, shops, etc.)
                     if Real_Estate_Agency:
                         c.execute("""
-                            SELECT name FROM listings 
-                            WHERE agency ILIKE %s 
-                            AND property_type IN ('office', 'commercial') 
+                            SELECT name FROM listings
+                            WHERE agency ILIKE %s
+                            AND property_type IN ('office', 'commercial')
                             AND listing_type = %s
                         """, (Real_Estate_Agency, listing_type))
                     else:
                         c.execute("""
-                            SELECT name FROM listings 
-                            WHERE property_type IN ('office', 'commercial') 
+                            SELECT name FROM listings
+                            WHERE property_type IN ('office', 'commercial')
                             AND listing_type = %s
                         """, (listing_type,))
                 rows = c.fetchall()

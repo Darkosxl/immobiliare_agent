@@ -233,8 +233,8 @@ class RealEstateItalianAgent(Agent):
 
                 Extract these fields (use null if not mentioned):
                 - zone: string (neighborhood, area, or address)
-                - listing_type: "sale" or "rent"  
-                - property_type: "living" or "commercial"
+                - listing_type: "sale" or "rent"
+                - property_type: "living", "commercial" or "parking"
                 - budget: integer (in euros, convert "200mila" to 200000)
                 - rooms: integer (number of rooms/bedrooms)
 
@@ -645,7 +645,7 @@ async def entrypoint(ctx: JobContext):
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
         llm=openai.LLM.with_x_ai(
-           model="grok-4-1-fast-reasoning",
+           model="grok-4-1-fast-non-reasoning",
         )
         #llm=lk_google.LLM(
         #    model="gemini-2.5-flash",

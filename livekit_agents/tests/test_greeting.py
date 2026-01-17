@@ -6,14 +6,10 @@ NOTE: This test uses the real LLM and costs API credits.
 """
 import pytest
 
-from agents.it_inbound_agent import RealEstateItalianAgent
-
 
 @pytest.mark.asyncio
-async def test_assistant_greeting(session, llm):
+async def test_assistant_greeting(session, judge_llm, agent):
     """Test that the agent makes a friendly Italian greeting."""
-    agent = RealEstateItalianAgent()
-    
     await session.start(agent)
     
     result = await session.run(user_input="Ciao, buongiorno")
@@ -23,7 +19,7 @@ async def test_assistant_greeting(session, llm):
         result.expect.next_event()
         .is_message(role="assistant")
         .judge(
-            llm, 
+            judge_llm,  # Use Kimi-K2 via Groq for judging
             intent="Makes a friendly greeting in Italian and offers assistance as a real estate agent."
         )
     )
