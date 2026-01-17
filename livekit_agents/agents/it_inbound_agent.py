@@ -645,7 +645,7 @@ async def entrypoint(ctx: JobContext):
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
         llm=openai.LLM.with_x_ai(
-           model="grok-4-1-fast-non-reasoning",
+           model="grok-4-fast-reasoning",
         )
         #llm=lk_google.LLM(
         #    model="gemini-2.5-flash",
