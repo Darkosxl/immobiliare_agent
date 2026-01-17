@@ -22,10 +22,12 @@ from agents.it_inbound_agent import RealEstateItalianAgent
 class _TestableAgent(RealEstateItalianAgent):
     """
     Test-safe version of RealEstateItalianAgent.
-    
+
     Inherits ALL behavior (prompt, tools, LLM logic) but overrides on_enter
     to skip whitelist check which requires a real LiveKit job context.
     """
+    is_test = True
+
     async def on_enter(self):
         # Skip whitelist check - no job context in tests
         await self.session.generate_reply(allow_interruptions=False)
@@ -56,8 +58,8 @@ async def judge_llm():
                 base_url="https://openrouter.ai/api/v1",
                 api_key=os.getenv("OPENROUTER_API_KEY"),
             ))),
-            ("minimax-m2", await stack.enter_async_context(openai.LLM(
-                model="minimax/minimax-m2",
+            ("gpt-5-mini", await stack.enter_async_context(openai.LLM(
+                model="openai/gpt-5-mini",
                 base_url="https://openrouter.ai/api/v1",
                 api_key=os.getenv("OPENROUTER_API_KEY"),
             ))),

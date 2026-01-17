@@ -144,17 +144,20 @@ class RealEstateItalianAgent(Agent):
             
         """
         logger.info(f"🚀 TOOL: schedule_meeting | address={apartment_address}, date={date}")
-        
+
         try:
-            # Extract phone number from room name (format: call-_393517843713_...)
-            job_ctx = get_job_context()
-            room_name = job_ctx.room.name if job_ctx.room else ""
-            phone_number = "Unknown"
-            if room_name.startswith("call-"):
-                parts = room_name.split("_")
-                if len(parts) >= 2:
-                    phone_number = parts[1]
-            
+            # In tests, skip job context (no LiveKit room)
+            if getattr(self, 'is_test', False):
+                phone_number = "TEST-000000"
+            else:
+                job_ctx = get_job_context()
+                room_name = job_ctx.room.name if job_ctx.room else ""
+                phone_number = "Unknown"
+                if room_name.startswith("call-"):
+                    parts = room_name.split("_")
+                    if len(parts) >= 2:
+                        phone_number = parts[1]
+
             token = get_google_token()
             start = datetime.fromisoformat(date)
             end = start + timedelta(minutes=30)
@@ -184,6 +187,14 @@ class RealEstateItalianAgent(Agent):
                 logger.error(f"❌ CALENDAR API FAILED: {response.status_code} - {response.text}")
             else:
                 logger.info(f"✅ TOOL RESULT: schedule_meeting | Calendar event created successfully")
+
+                # In tests, immediately cancel the event we just created
+                if getattr(self, 'is_test', False):
+                    event_id = response.json().get("id")
+                    if event_id:
+                        delete_url = f"https://www.googleapis.com/calendar/v3/calendars/{CALENDAR}/events/{event_id}"
+                        requests.delete(delete_url, headers={"Authorization": f"Bearer {token}"})
+                        logger.info(f"🧪 TEST MODE: Cancelled event {event_id} after successful booking test")
         except Exception as e:
             logger.error(f"❌ TOOL FAILED INTERNALLY: schedule_meeting | {e}")
         

@@ -17,7 +17,7 @@ async def any_message_matches(result: RunResult, judge_llms: list, intent: str) 
 
     if not messages:
         raise AssertionError("No assistant messages found")
-    full_intent = intent + ". Explain also why the intent is not achieved. Explain everything in english"
+    full_intent = intent + ". The message is in Italian (expected). If it fails, explain why in English."
     
     concurrent_judges = judge_llms[:3]
     fallback_judge = judge_llms[3] if len(judge_llms) > 3 else None
