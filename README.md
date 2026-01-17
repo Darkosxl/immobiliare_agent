@@ -53,3 +53,18 @@ OUTBOUND:
 -The llm uses a tool to hit an endpoint with the phone number, the name of the person #their request might be added later
 -the voice AI calls that number, and then they can book a meeting #or get information about the apartment this might be scraped from idealista
 -it will log the conversation so the immobiliare can see it.
+
+
+
+-LLMs:
+
+grok-4-1-fast: thinks way too fucking much, leaked reasoning tokens into
+the actual live conversation.
+
+GROQ-kimi-k2: was perfect, was fast, was cheap, malum kisi paid for it, but
+somehow it couldnt execute tool calls.
+
+gemini-3-flash: the gemini api is way too slow. Otherwise it was great too.
+
+openai: too expensive didnt even bother
+

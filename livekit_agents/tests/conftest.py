@@ -4,6 +4,8 @@ Shared pytest fixtures for LiveKit agent tests.
 import pytest
 import os
 import sys
+from contextlib import AsyncExitStack
+
 
 # Add parent directory to path so we can import agent modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -45,8 +47,13 @@ async def llm():
 @pytest.fixture
 async def judge_llm():
     """Judge LLM - Kimi-K2 via Groq (cheaper for evaluating responses)."""
-    async with groq.LLM(model="moonshotai/kimi-k2-instruct-0905") as llm:
-        yield llm
+    async with AsyncExitStack() as stack:
+        judges = [
+            ("kimi-k2", await stack.enter_async_context(groq.LLM(model="moonshotai/kimi-k2-instruct-0905"))),
+            ("gpt-oss-120b", await stack.enter_async_context(groq.LLM(model="openai/gpt-oss-120b"))),
+            ("qwen3-32b", await stack.enter_async_context(groq.LLM(model="qwen/qwen3-32b"))),
+        ]
+        yield judges
 
 
 @pytest.fixture
