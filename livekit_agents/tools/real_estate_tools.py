@@ -7,7 +7,7 @@ from groq import Groq
 from geopy.distance import geodesic
 from livekit.agents import RunContext, function_tool
 
-from tools import database as db
+from utils import database as db
 from prompts.it_inbound_prompt import immobiliare_agenzia
 
 logger = logging.getLogger("real-estate-tools")

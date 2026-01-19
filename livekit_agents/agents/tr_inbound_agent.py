@@ -39,7 +39,7 @@ from livekit.plugins import openai, silero, google as lk_google, deepgram, noise
 from livekit.agents import room_io, metrics
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
-from tools import database as db
+from utils import database as db
 from prompts.tr_inbound_prompt import SYSTEM_PROMPT
 from datetime import datetime, timedelta, timezone as tz
 
