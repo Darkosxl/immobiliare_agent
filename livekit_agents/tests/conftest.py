@@ -17,6 +17,7 @@ from livekit.agents import AgentSession
 from livekit.plugins import openai, groq
 
 from agents.it_inbound_agent import RealEstateItalianAgent
+from agents.it_outbound_agent import RealEstateItalianOutboundAgent
 
 
 class _TestableAgent(RealEstateItalianAgent):
@@ -37,6 +38,26 @@ class _TestableAgent(RealEstateItalianAgent):
 def agent():
     """Create a _TestableAgent instance (same as production but test-safe)."""
     return _TestableAgent()
+
+
+class _TestableOutboundAgent(RealEstateItalianOutboundAgent):
+    """
+    Test-safe version of RealEstateItalianOutboundAgent.
+
+    Inherits ALL behavior (prompt, tools, LLM logic) but overrides on_enter
+    to skip SIP call which requires a real LiveKit job context.
+    """
+    is_test = True
+
+    async def on_enter(self):
+        # Skip SIP call - no job context in tests
+        await self.session.generate_reply(allow_interruptions=False)
+
+
+@pytest.fixture
+def outbound_agent():
+    """Create a _TestableOutboundAgent instance (same as production but test-safe)."""
+    return _TestableOutboundAgent()
 
 
 @pytest.fixture

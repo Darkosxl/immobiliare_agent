@@ -15,7 +15,9 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Add new files here as needed
 FILES_TO_CHECK = [
     "agents/it_inbound_agent.py",
+    "agents/it_outbound_agent.py",
     "prompts/it_inbound_prompt.py",
+    "prompts/it_outbound_prompt.py",
     "tools/database.py",
 ]
 
