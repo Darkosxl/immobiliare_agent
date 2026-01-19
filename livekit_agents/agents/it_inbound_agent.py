@@ -43,7 +43,7 @@ from livekit.plugins import openai, silero, google as lk_google, deepgram, noise
 from livekit.agents import room_io, metrics
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
-from utils import database as db
+import utils.database as db
 from prompts.it_inbound_prompt import SYSTEM_PROMPT, immobiliare_agenzia
 from datetime import datetime, timedelta, timezone as tz
 from utils.agents_utils import get_google_token
@@ -141,7 +141,7 @@ async def entrypoint(ctx: JobContext):
         ,
         tts=elevenlabs.TTS(
             voice_id="gfKKsLN1k0oYYN9n2dXX",#violetta
-            model="eleven_v3"
+            model="eleven_multilingual_v2"
         )
         #lk_google.TTS(
         #    gender="female",

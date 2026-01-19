@@ -16,13 +16,12 @@ from livekit.agents import (
     cli,
     WorkerOptions,
     room_io,
-    RoomOptions
 )
 from livekit.plugins import openai, silero, deepgram, noise_cancellation, elevenlabs
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
-from agents.it_inbound_agent import RealEstateItalianAgent
+from it_inbound_agent import RealEstateItalianAgent
 from prompts.it_outbound_prompt import SYSTEM_PROMPT
 from tools.calendar_tools import (
     schedule_meeting,
@@ -38,7 +37,6 @@ logger.setLevel(logging.INFO)
 load_dotenv(".env")
 
 OUTBOUND_TRUNK_ID = os.getenv("OUTBOUND_TRUNK_ID")
-OUTBOUND_PHONE_NUMBER = os.getenv("OUTBOUND_PHONE_NUMBER")
 
 
 class RealEstateItalianOutboundAgent(RealEstateItalianAgent):
@@ -56,9 +54,14 @@ class RealEstateItalianOutboundAgent(RealEstateItalianAgent):
                 check_available_slots
             ]
         )
-        self.participant: rtc.RemoteParticipant | None = None 
+        self.participant: rtc.RemoteParticipant | None = None
+
     def set_participant(self, participant: rtc.RemoteParticipant):
         self.participant = participant
+
+    async def on_enter(self):
+        # Skip whitelist check for outbound - we're calling them
+        await self.session.generate_reply(allow_interruptions=False)
     
 async def entrypoint(ctx: JobContext):
     
@@ -79,7 +82,8 @@ async def entrypoint(ctx: JobContext):
         ),
         tts=elevenlabs.TTS(
             voice_id="W71zT1VwIFFx3mMGH2uZ",
-            model="eleven_v3"
+            model="eleven_multilingual_v2",
+            api_key=os.getenv("ELEVENLABS_API_KEY")
         ),
         turn_detection=MultilingualModel(),
         vad=silero.VAD.load(),
@@ -90,11 +94,11 @@ async def entrypoint(ctx: JobContext):
     
     session_started = asyncio.create_task(
         session.start(
-            agent=RealEstateItalianOutboundAgent(),
+            agent=agent,
             room=ctx.room,
             room_options=room_io.RoomOptions(
                 audio_input=room_io.AudioInputOptions(
-                    noise_cancellation=noise_cancellation.BVCTelephony(),
+                    noise_cancellation=noise_cancellation.BVC(),
                     ),
                 ),
             )
@@ -104,7 +108,7 @@ async def entrypoint(ctx: JobContext):
             api.CreateSIPParticipantRequest(
                 room_name=ctx.room.name,
                 sip_trunk_id=OUTBOUND_TRUNK_ID,
-                sip_call_to=OUTBOUND_PHONE_NUMBER,
+                sip_call_to=dial_info["phone_number"],
                 participant_identity=participant_identity,
                 wait_until_answered=True,
             )
