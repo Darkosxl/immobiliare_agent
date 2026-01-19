@@ -5,7 +5,7 @@ import requests
 
 from groq import Groq
 from geopy.distance import geodesic
-from livekit.agents import RunContext, function_tool
+from livekit.agents import RunContext, function_tool, get_job_context
 
 from utils import database as db
 from prompts.it_inbound_prompt import immobiliare_agenzia
@@ -225,3 +225,61 @@ Output only the listing name(s), nothing else."""
             for l in top3[1:3]
         ]
     })
+
+
+@function_tool
+async def immobiliare_offers(context: RunContext, agency: str):
+    """Get available service offers/packages for a real estate agency.
+    Use this to present special offers to potential sellers/landlords.
+
+    Args:
+        agency (str): The name of the agency (e.g., "primacasa")
+
+    Returns:
+        A list of available offers for the agency
+    """
+    logger.info(f"🎁 TOOL: immobiliare_offers | agency={agency}")
+
+    offers = db.get_offers_by_agency(agency)
+
+    if not offers:
+        return f"Nessuna offerta disponibile per {agency}."
+
+    offers_text = "\n".join([f"- {offer}" for offer in offers])
+    return f"Offerte disponibili per {agency}:\n{offers_text}"
+
+
+@function_tool
+async def note_info(context: RunContext, note: str):
+    """Record any relevant information about the caller or property.
+    Use this to note down property details, pain points, preferences, or any other relevant info.
+
+    Args:
+        note (str): Natural language notes (property details, pain points, preferences, etc.)
+
+    Returns:
+        Confirmation that the note was recorded
+    """
+    logger.info(f"📝 TOOL: note_info | note={note}")
+
+    # Get phone number from context
+    agent = context.agent
+    if getattr(agent, 'is_test', False):
+        phone_number = "TEST-000000"
+    else:
+        job_ctx = get_job_context()
+        room_name = job_ctx.room.name if job_ctx.room else ""
+        phone_number = "Unknown"
+        if room_name.startswith("call-"):
+            parts = room_name.split("_")
+            if len(parts) >= 2:
+                phone_number = parts[1]
+
+    # Save note to database
+    success = db.add_customer_note(phone_number, note)
+
+    if success:
+        return f"Ho annotato: {note}"
+    else:
+        logger.error(f"Failed to save note for {phone_number}")
+        return f"Ho annotato: {note}"

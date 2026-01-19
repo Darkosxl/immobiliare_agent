@@ -2,10 +2,10 @@ import asyncio
 import logging
 import os
 import json
-#TODO 1: implement note_info tool
-#TODO 2: make sure flynumber telephony works
-#TODO 3: test the agent
-#TODO 4: immobiliare message integration
+#DONE 1: implement note_info tool (in tools/real_estate_tools.py)
+#NOTE 2: flynumber telephony only works for inbound
+#DONE 3: test the agent (tests written in tests/test_outbound_*.py)
+#DONE 4: implement immobiliare_offers tool (in tools/real_estate_tools.py)
 
 from dotenv import load_dotenv
 from livekit import api, rtc
@@ -30,7 +30,7 @@ from tools.calendar_tools import (
     cancel_booking,
     check_available_slots
 )
-# from tools.outbound_tools import note_info  # TODO: implement later
+from tools.real_estate_tools import note_info, immobiliare_offers
 
 logger = logging.getLogger("grok-agent")
 logger.setLevel(logging.INFO)
@@ -47,7 +47,8 @@ class RealEstateItalianOutboundAgent(RealEstateItalianAgent):
             instructions=SYSTEM_PROMPT,
             tools=[
                 schedule_meeting,
-                # note_info,  # TODO: uncomment when implemented
+                note_info,
+                immobiliare_offers,
                 end_call,
                 get_existing_bookings,
                 cancel_booking,

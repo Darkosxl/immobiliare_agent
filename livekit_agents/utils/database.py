@@ -53,6 +53,21 @@ def init_db():
                 phone_number TEXT PRIMARY KEY,
                 added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )''')
+
+            # Offers table for immobiliare offers (outbound)
+            c.execute('''CREATE TABLE IF NOT EXISTS offers (
+                id SERIAL PRIMARY KEY,
+                agency TEXT NOT NULL,
+                offer TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )''')
+
+            # Customer notes table for outbound calls
+            c.execute('''CREATE TABLE IF NOT EXISTS customer_notes (
+                phone_number TEXT PRIMARY KEY,
+                notes TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )''')
             conn.commit()
             
             # Check if empty and add dummy data for testing
@@ -227,6 +242,66 @@ def get_all_whitelisted() -> list:
             except Exception as e:
                 print(f"Error fetching whitelist: {e}")
                 return []
+
+# ===== OFFERS FUNCTIONS =====
+
+def get_offers_by_agency(agency: str) -> list:
+    """Get all offers for a specific agency using fuzzy matching"""
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as c:
+            try:
+                # Fuzzy match: contains, case-insensitive
+                c.execute("SELECT offer FROM offers WHERE agency ILIKE %s", (f"%{agency}%",))
+                rows = c.fetchall()
+                return [row['offer'] for row in rows]
+            except Exception as e:
+                print(f"Error fetching offers: {e}")
+                return []
+
+def get_all_offers() -> list:
+    """Get all offers from all agencies"""
+    with get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as c:
+            try:
+                c.execute("SELECT agency, offer FROM offers")
+                rows = c.fetchall()
+                return [dict(row) for row in rows]
+            except Exception as e:
+                print(f"Error fetching all offers: {e}")
+                return []
+
+# ===== CUSTOMER NOTES FUNCTIONS =====
+
+def add_customer_note(phone_number: str, note: str) -> bool:
+    """Add a note for a customer. Appends to existing notes with newline."""
+    with get_connection() as conn:
+        with conn.cursor() as c:
+            try:
+                # Use upsert: insert or append to existing notes
+                c.execute("""
+                    INSERT INTO customer_notes (phone_number, notes, updated_at)
+                    VALUES (%s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (phone_number) DO UPDATE
+                    SET notes = customer_notes.notes || E'\n' || EXCLUDED.notes,
+                        updated_at = CURRENT_TIMESTAMP
+                """, (phone_number, note))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error adding customer note: {e}")
+                return False
+
+def get_customer_notes(phone_number: str) -> str:
+    """Get all notes for a customer"""
+    with get_connection() as conn:
+        with conn.cursor() as c:
+            try:
+                c.execute("SELECT notes FROM customer_notes WHERE phone_number = %s", (phone_number,))
+                row = c.fetchone()
+                return row[0] if row else ""
+            except Exception as e:
+                print(f"Error fetching customer notes: {e}")
+                return ""
 
 # Initialize database on module import
 try:
