@@ -5,3 +5,4 @@ add_geocoding.py
 tools/real_estate.db
 tools/whitelist.txt
 tools/livekit-agent-service-account.json
+local/*

@@ -3,7 +3,7 @@ Test 4: Full buyer conversation flow.
 Simulates a complete conversation from greeting through apartment search to booking.
 """
 import pytest
-from tests.utils import any_message_matches
+from utils.tests_utils import any_message_matches
 from livekit.agents.voice.run_result import FunctionCallEvent
 
 
