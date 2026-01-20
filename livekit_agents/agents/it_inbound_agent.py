@@ -39,7 +39,7 @@ from livekit.agents import (
     JobProcess
 )
 from livekit.plugins import groq
-from livekit.plugins import openai, silero, google as lk_google, deepgram, noise_cancellation
+from livekit.plugins import openai, silero, google as lk_google, deepgram, noise_cancellation, elevenlabs
 from livekit.agents import room_io, metrics
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
