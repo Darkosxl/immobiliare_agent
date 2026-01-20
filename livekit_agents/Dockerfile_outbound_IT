@@ -1,0 +1,57 @@
+# Italian Outbound LiveKit Agent Dockerfile
+# syntax=docker/dockerfile:1
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim
+
+# Prevents Python from writing pyc files.
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Keeps Python from buffering stdout and stderr
+ENV PYTHONUNBUFFERED=1
+
+# Create a non-privileged user
+ARG UID=10001
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/home/appuser" \
+    --shell "/sbin/nologin" \
+    --uid "${UID}" \
+    appuser
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    python3-dev \
+    libglib2.0-0 \
+    libportaudio2 \
+    libsndfile1 \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+USER appuser
+
+RUN mkdir -p /home/appuser/.cache
+RUN chown -R appuser /home/appuser/.cache
+
+WORKDIR /home/appuser
+
+COPY requirements.txt .
+RUN python -m pip install --user --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY tools/ ./tools/
+COPY agents/ ./agents/
+COPY prompts/ ./prompts/
+COPY tasks/ ./tasks/
+COPY utils/ ./utils/
+
+ENV PYTHONPATH="/home/appuser"
+
+# Pre-download models using the outbound agent script
+RUN python agents/it_outbound_agent.py download-files
+
+ENTRYPOINT ["python", "agents/it_outbound_agent.py"]
+CMD ["start"]
