@@ -141,7 +141,8 @@ async def entrypoint(ctx: JobContext):
         ,
         tts=elevenlabs.TTS(
             voice_id="gfKKsLN1k0oYYN9n2dXX",#violetta
-            model="eleven_multilingual_v2"
+            model="eleven_multilingual_v2",
+            api_key=os.getenv("ELEVENLABS_API_KEY")
         )
         #lk_google.TTS(
         #    gender="female",
