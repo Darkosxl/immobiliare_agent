@@ -47,6 +47,7 @@ COPY tools/ ./tools/
 COPY agents/ ./agents/
 COPY prompts/ ./prompts/
 COPY tasks/ ./tasks/
+COPY utils/ ./utils/
 
 
 ENV PYTHONPATH="/home/appuser"
