@@ -53,7 +53,8 @@ COPY utils/ ./utils/
 
 ENV PYTHONPATH="/home/appuser"
 
-RUN python agents/it_inbound_agent.py download-files
+# Pre-download models using the inbound agent script
+RUN python -m agents.it_inbound_agent download-files
 
-ENTRYPOINT ["python", "agents/it_inbound_agent.py"]
+ENTRYPOINT ["python", "-m", "agents.it_inbound_agent"]
 CMD ["start"]
