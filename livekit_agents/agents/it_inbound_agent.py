@@ -129,16 +129,15 @@ async def entrypoint(ctx: JobContext):
     }
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
-        llm=openai.LLM.with_x_ai(
-           model="grok-4-fast-reasoning",
-        )
-        #llm=lk_google.LLM(
-        #    model="gemini-2.5-flash",
-        #    vertexai=True,
-        #  project="ancient-medium-454210-i1",
-        #    location="us-central1"
+        #llm=openai.LLM.with_x_ai(
+        #   model="grok-4-fast-reasoning",
         #)
-        ,
+        llm=lk_google.LLM(
+            model="gemini-2.5-flash",
+            vertexai=True,
+            #project="ancient-medium-454210-i1",
+            #location="us-central1"
+        ),
         tts=elevenlabs.TTS(
             voice_id="gfKKsLN1k0oYYN9n2dXX",#violetta
             model="eleven_multilingual_v2",
