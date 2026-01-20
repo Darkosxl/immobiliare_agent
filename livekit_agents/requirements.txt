@@ -81,7 +81,6 @@ livekit-plugins-openai==1.3.11
 livekit-plugins-silero==1.3.11
 livekit-plugins-turn-detector==1.3.11
 livekit-protocol==1.1.1
--e git+https://github.com/Darkosxl/immobiliare_agent.git@0c062c90630a9ed0c5e4ca554b88c9d66da4f9e2#egg=livekit_real_estate_agents&subdirectory=livekit_agents
 lxml==5.4.0
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
