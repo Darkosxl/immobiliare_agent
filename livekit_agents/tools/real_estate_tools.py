@@ -198,7 +198,11 @@ Output only the listing name(s), nothing else."""
     # Step 4: Geocoding succeeded - find closest listings by distance
     user_coords = (float(geo_data[0]["lat"]), float(geo_data[0]["lon"]))
 
-    listings = db.getAllListingsWithCoords()
+    listings = db.getAllListingsWithCoords(
+        Real_Estate_Agency=immobiliare_agenzia,
+        property_type=property_type,
+        listing_type=listing_type
+    )
 
     # Calculate distance for each listing
     for listing in listings:
@@ -263,7 +267,7 @@ async def note_info(context: RunContext, note: str):
     logger.info(f"📝 TOOL: note_info | note={note}")
 
     # Get phone number from context
-    agent = context.agent
+    agent = context.session.current_agent
     if getattr(agent, 'is_test', False):
         phone_number = "TEST-000000"
     else:

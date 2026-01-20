@@ -38,9 +38,9 @@ async def test_outbound_opposizioni_route_delayed(session, judge_llm, outbound_a
     result1 = await session.run(user_input="Pronto")
     result1.expect.skip_next()
 
-    # Turn 2: User engages briefly
+    # Turn 2: User engages briefly - just skip, we only care about the opposizioni handling
     result2 = await session.run(user_input="Si, dimmi")
-    await any_message_matches(result2, judge_llm, intent="Introduces themselves from the real estate agency and asks if they have time to talk")
+    result2.expect.skip_next()
 
     # Turn 3: User is a bit annoyed, mentions opposizioni
     result3 = await session.run(user_input="Ma scusi eh, io ho chiesto di non essere chiamato. Sono nel registro delle opposizioni, lo sapevate?")

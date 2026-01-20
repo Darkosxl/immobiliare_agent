@@ -175,12 +175,30 @@ def getListing(listing_name):
                 print(f"Error fetching listing details: {e}")
                 return None
 
-def getAllListingsWithCoords():
-    """Get all listings that have latitude and longitude coordinates"""
+def getAllListingsWithCoords(Real_Estate_Agency=None, property_type="living", listing_type="rent"):
+    """Get all listings with coordinates, filtered by agency, property type, and listing type."""
     with get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as c:
             try:
-                c.execute("SELECT * FROM listings WHERE latitude IS NOT NULL AND longitude IS NOT NULL")
+                conditions = ["latitude IS NOT NULL", "longitude IS NOT NULL"]
+                params = []
+
+                if Real_Estate_Agency:
+                    conditions.append("agency ILIKE %s")
+                    params.append(Real_Estate_Agency)
+
+                conditions.append("listing_type = %s")
+                params.append(listing_type)
+
+                if property_type == "living":
+                    conditions.append("property_type NOT IN ('office', 'commercial', 'parking')")
+                elif property_type == "parking":
+                    conditions.append("property_type = 'parking'")
+                else:
+                    conditions.append("property_type IN ('office', 'commercial')")
+
+                query = f"SELECT * FROM listings WHERE {' AND '.join(conditions)}"
+                c.execute(query, params)
                 rows = c.fetchall()
                 return [dict(row) for row in rows]
             except Exception as e:

@@ -18,7 +18,7 @@ FILES_TO_CHECK = [
     "agents/it_outbound_agent.py",
     "prompts/it_inbound_prompt.py",
     "prompts/it_outbound_prompt.py",
-    "tools/database.py",
+    "utils/database.py",
 ]
 
 

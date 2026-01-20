@@ -21,7 +21,7 @@ from livekit.plugins import openai, silero, deepgram, noise_cancellation, eleven
 from livekit.agents.voice import MetricsCollectedEvent
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
-from it_inbound_agent import RealEstateItalianAgent
+from agents.it_inbound_agent import RealEstateItalianAgent
 from prompts.it_outbound_prompt import SYSTEM_PROMPT
 from tools.calendar_tools import (
     schedule_meeting,

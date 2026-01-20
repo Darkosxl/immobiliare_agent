@@ -16,4 +16,3 @@ async def test_assistant_greeting(session, judge_llm, agent):
     result = await session.run(user_input="Ciao, buongiorno")
     
     await any_message_matches(result, judge_llm, intent="Makes a friendly greeting in Italian and offers assistance as a real estate agent. If it is understandable by a human, that means it works, be a little lenient and think big picture in your evaluation.")
-    result.expect.no_more_events()

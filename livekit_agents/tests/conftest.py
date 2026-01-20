@@ -1,6 +1,9 @@
 """
 Shared pytest fixtures for LiveKit agent tests.
 """
+from agents.it_inbound_agent import RealEstateItalianAgent
+from agents.it_outbound_agent import RealEstateItalianOutboundAgent
+
 import pytest
 import os
 import sys
@@ -16,8 +19,6 @@ load_dotenv()
 from livekit.agents import AgentSession
 from livekit.plugins import openai, groq
 
-from agents.it_inbound_agent import RealEstateItalianAgent
-from agents.it_outbound_agent import RealEstateItalianOutboundAgent
 
 
 class _TestableAgent(RealEstateItalianAgent):

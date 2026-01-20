@@ -28,7 +28,7 @@ async def schedule_meeting(
 
     try:
         # In tests, skip job context (no LiveKit room)
-        agent = context.agent
+        agent = context.session.current_agent
         if getattr(agent, 'is_test', False):
             phone_number = "TEST-000000"
         else:
@@ -291,6 +291,15 @@ async def check_available_slots(ctx: RunContext, date: str):
         if begin < end:
             available_slots.append((begin.strftime("%H:%M"), end.strftime("%H:%M")))
 
-    result = "Available time slots for visits: (make up a 30 minute interval from the list of available times) " + str(available_slots)
+    # Expand ranges to 30-min slots: ('10:00', '12:00') -> ['10:00', '10:30', '11:00', '11:30']
+    times = []
+    for start, end in available_slots:
+        mins = int(start[:2]) * 60 + int(start[3:])
+        end_mins = int(end[:2]) * 60 + int(end[3:])
+        while mins < end_mins:
+            times.append(f"{mins // 60:02d}:{mins % 60:02d}")
+            mins += 30
+
+    result = "Available times: " + ", ".join(times)
     logger.info(f"✅ TOOL RESULT: check_available_slots | {result}")
     return result
