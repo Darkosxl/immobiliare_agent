@@ -5,14 +5,16 @@ import uuid
 
 from dotenv import load_dotenv
 from livekit import api
+from livekit.protocol.sip import CreateSIPParticipantRequest, SIPParticipantInfo
+import time
 
 load_dotenv()
 
 async def main():
     lk = api.LiveKitAPI()
-
+    
     phone_to_call = os.environ.get("OUTBOUND_PHONE_NUMBER", "+39XXXXXXXXX")
-    room_name = f"outbound-{uuid.uuid4().hex[:8]}"
+    room_name = f"sip_room_1_{phone_to_call[-4:]}_{int(time.time())}"
 
     # 1. Create room with phone number in metadata
     await lk.room.create_room(
@@ -29,10 +31,6 @@ async def main():
             agent_name="RealEstate-Outbound-Agent",
         )
     )
-
-    print(f"Dispatched to {phone_to_call}")
-    print(f"Room: {room_name}")
-
     await lk.aclose()
 
 asyncio.run(main())

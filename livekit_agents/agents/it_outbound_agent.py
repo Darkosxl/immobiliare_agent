@@ -93,17 +93,6 @@ async def entrypoint(ctx: JobContext):
         false_interruption_timeout=1.0,
     )
     
-    session_started = asyncio.create_task(
-        session.start(
-            agent=agent,
-            room=ctx.room,
-            room_options=room_io.RoomOptions(
-                audio_input=room_io.AudioInputOptions(
-                    noise_cancellation=noise_cancellation.BVC(),
-                    ),
-                ),
-            )
-        )
     try:
         await ctx.api.sip.create_sip_participant(
             api.CreateSIPParticipantRequest(
@@ -114,10 +103,17 @@ async def entrypoint(ctx: JobContext):
                 wait_until_answered=True,
             )
         )
-        await session_started
         participant = await ctx.wait_for_participant(identity=participant_identity)
         logger.info(f"participant joined: {participant.identity}")
         agent.set_participant(participant)
+        
+        await session.start(
+            agent=agent,
+            room=ctx.room,
+            room_options=room_io.RoomOptions(
+                participant_identity=participant_identity,  # Wait for phone participant
+            ),
+        )
     except api.TwirpError as e:
             logger.error(
                 f"error creating SIP participant: {e.message}, "
