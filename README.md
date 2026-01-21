@@ -7,7 +7,9 @@ livekit_agents: implementation of inbound and outbound livekit agents:
  /tools: any systematic tools that have been deployed
  /tasks: to be used, this is the second type of voiceai implementation that has a task driven identity
  
-
+real_estate_dashboard:
+ -logged old vapi calls and allowed server to run from a dashboard,
+ -will adapt this to my livekit agents
 
 
 

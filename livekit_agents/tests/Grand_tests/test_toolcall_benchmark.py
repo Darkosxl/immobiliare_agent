@@ -1,14 +1,13 @@
 import pytest
 import os
 import csv
-import asyncio
 import statistics
 from collections import defaultdict
-from unittest.mock import patch, MagicMock
 from rich.console import Console
 from rich.table import Table
 from rich import box
-from livekit.agents import Agent, AgentSession, function_tool, RunContext
+from livekit.agents import Agent, AgentSession, function_tool, RunContext, mock_tools
+from livekit.agents.voice.run_result import FunctionCallEvent
 from livekit.plugins import openai, groq, anthropic, google
 from dotenv import load_dotenv
 from prompts.it_inbound_prompt import SYSTEM_PROMPT
@@ -63,6 +62,11 @@ class ToolTestAgent(Agent):
             instructions=SYSTEM_PROMPT,
             tools=[get_apartment_info]
         )
+
+
+# Mock function for tracking tool calls
+def _mock_get_apartment_info(query: str) -> str:
+    return "Abbiamo un bellissimo appartamento in centro a Milano, 90mq, 1200 euro al mese."
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -149,18 +153,6 @@ def print_summary():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("model_name", get_models())
 async def test_toolcall_accuracy(model_name):
-    llm = create_llm_instance(model_name)
-
-    current_metrics = {}
-
-    def on_metrics(m):
-        current_metrics['ttft'] = m.ttft
-        current_metrics['tps'] = m.tokens_per_second
-        current_metrics['duration'] = m.duration
-        current_metrics['total_tokens'] = m.total_tokens
-
-    llm.on("metrics_collected", on_metrics)
-
     runs_file = os.path.join(os.path.dirname(__file__), "toolcall_runs.csv")
     results_file = os.path.join(os.path.dirname(__file__), "toolcall_results.csv")
 
@@ -175,28 +167,40 @@ async def test_toolcall_accuracy(model_name):
         status = "FAIL"
 
         try:
-            agent = ToolTestAgent()
-            async with AgentSession(llm=llm) as session:
-                await session.start(agent)
-                response = await session.run(user_input="Ciao, sto cercando un appartamento in affitto a Milano.")
+            llm = create_llm_instance(model_name)
 
-                # Check if tool was called by looking at function call events
-                from livekit.agents.voice.run_result import FunctionCallEvent
-                fnc_events = [e for e in response.events if isinstance(e, FunctionCallEvent)]
+            def on_metrics(m):
+                current_metrics['ttft'] = m.ttft
+                current_metrics['tps'] = m.tokens_per_second
+                current_metrics['duration'] = m.duration
+                current_metrics['total_tokens'] = m.total_tokens
 
-                if fnc_events:
-                    tool_names = [e.item.name for e in fnc_events]
-                    tool_name = ", ".join(tool_names)
-                    if "get_apartment_info" in tool_names:
-                        tool_called = True
-                        status = "SUCCESS"
-                    else:
-                        status = f"WRONG_TOOL"
-                else:
-                    status = "NO_CALL"
+            llm.on("metrics_collected", on_metrics)
+
+            async with llm:
+                agent = ToolTestAgent()
+                async with AgentSession(llm=llm) as session:
+                    await session.start(agent)
+
+                    with mock_tools(ToolTestAgent, {"get_apartment_info": _mock_get_apartment_info}):
+                        response = await session.run(user_input="Ciao, sto cercando un appartamento in affitto a Milano.")
+
+                        # Check if tool was called by looking at function call events
+                        fnc_events = [e for e in response.events if isinstance(e, FunctionCallEvent)]
+
+                        if fnc_events:
+                            tool_names = [e.item.name for e in fnc_events]
+                            tool_name = ", ".join(tool_names)
+                            if "get_apartment_info" in tool_names:
+                                tool_called = True
+                                status = "SUCCESS"
+                            else:
+                                status = "WRONG_TOOL"
+                        else:
+                            status = "NO_CALL"
 
         except Exception as e:
-            status = f"ERROR"
+            status = "ERROR"
             tool_name = str(e)[:50]
 
         ttft = current_metrics.get('ttft', 0)
