@@ -1,0 +1,5 @@
+Model,Avg TTFT,Avg TPS,Avg Duration,Avg Tokens
+openai/gpt-5.2,0.6429,38.48,1.6380,2781.00
+openai/gpt-5.2,0.8687,35.99,1.6259,2780.80
+openai/gpt-5-mini-2025-08-07,16.7717,58.67,17.0043,3736.00
+openai/gpt-5-2025-08-07,11.3526,36.65,11.5213,3138.20
