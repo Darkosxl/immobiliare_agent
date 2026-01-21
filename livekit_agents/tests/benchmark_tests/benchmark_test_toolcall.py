@@ -69,6 +69,12 @@ def _mock_get_apartment_info(query: str) -> str:
     return "Abbiamo un bellissimo appartamento in centro a Milano, 90mq, 1200 euro al mese."
 
 
+# User input with enough detail that the prompt says to call the tool
+# Per the prompt: "Whenever a caller requests information, run the relevant tool first"
+# This provides zone + budget + intent = should trigger tool call
+USER_INPUT = "Buongiorno, cerco un appartamento in affitto zona Porta Romana, budget massimo 1500 euro al mese, due camere."
+
+
 @pytest.fixture(scope="session", autouse=True)
 def init_csv():
     # Results file (Averages)
@@ -183,7 +189,7 @@ async def test_toolcall_accuracy(model_name):
                     await session.start(agent)
 
                     with mock_tools(ToolTestAgent, {"get_apartment_info": _mock_get_apartment_info}):
-                        response = await session.run(user_input="Ciao, sto cercando un appartamento in affitto a Milano.")
+                        response = await session.run(user_input=USER_INPUT)
 
                         # Check if tool was called by looking at function call events
                         fnc_events = [e for e in response.events if isinstance(e, FunctionCallEvent)]
