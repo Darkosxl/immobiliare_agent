@@ -10,6 +10,7 @@ from livekit.agents import (
     AgentSession,
     JobContext,
     cli,
+    inference,
     WorkerOptions,
     room_io,
 )
@@ -82,9 +83,14 @@ async def entrypoint(ctx: JobContext):
 
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
-        llm=openai.LLM.with_x_ai(
-           model="grok-4-fast-reasoning",
+        llm=inference.LLM(
+            model="openai/gpt-5.2",
+            provider="openai",
+            api_key=os.getenv("OPENAI_API_KEY")
         ),
+        #=openai.LLM.with_x_ai(
+        #   model="grok-4-fast-reasoning",
+        #),
         tts=elevenlabs.TTS(
             voice_id="W71zT1VwIFFx3mMGH2uZ",
             model="eleven_multilingual_v2",

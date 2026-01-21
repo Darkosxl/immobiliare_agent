@@ -28,6 +28,7 @@ from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
+    inference,
     ChatContext,
     get_job_context,
     FunctionTool,
@@ -139,12 +140,16 @@ async def entrypoint(ctx: JobContext):
         #llm=openai.LLM.with_x_ai(
         #   model="grok-4-fast-reasoning",
         #)
-        llm=lk_google.LLM(
-            model="gemini-2.5-flash",
-            vertexai=True,
+        llm=inference.LLM(
+            model="openai/gpt-5.2",
+            provider="openai",
+            api_key=os.getenv("OPENAI_API_KEY")
+        ),
+        #lk_google.LLM(
+        #    model="gemini-2.5-flash",
+        #    vertexai=True,
             #project="ancient-medium-454210-i1",
             #location="us-central1"
-        ),
         tts=elevenlabs.TTS(
             voice_id="gfKKsLN1k0oYYN9n2dXX",#violetta
             model="eleven_multilingual_v2",
