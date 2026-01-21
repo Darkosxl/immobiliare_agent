@@ -82,11 +82,11 @@ class RealEstateItalianAgent(Agent):
     
     async def on_enter(self):
         #TODO PROPER SPAM CALL CHECK
-        if not await self._check_whitelisted():
-            await self.session.generate_reply(instructions="let the other person know that you are hanging up because their number is not whitelisted", allow_interruptions=False)
-            #await self.session.wait_for_playout()
-            await self.hangup()
-            return
+        #if not await self._check_whitelisted():
+        #    await self.session.generate_reply(instructions="let the other person know that you are hanging up because their number is not whitelisted", allow_interruptions=False)
+        #    #await self.session.wait_for_playout()
+        #    await self.hangup()
+        #    return
         await self.session.generate_reply(allow_interruptions=False)
 
     async def hangup(self):
