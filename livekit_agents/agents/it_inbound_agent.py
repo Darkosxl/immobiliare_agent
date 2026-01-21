@@ -140,9 +140,8 @@ async def entrypoint(ctx: JobContext):
         #llm=openai.LLM.with_x_ai(
         #   model="grok-4-fast-reasoning",
         #)
-        llm=inference.LLM(
+        llm=openai.LLM(
             model="gpt-5.2-chat-latest",
-            provider="openai",
             api_key=os.getenv("OPENAI_API_KEY")
         ),
         #lk_google.LLM(

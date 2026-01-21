@@ -83,9 +83,8 @@ async def entrypoint(ctx: JobContext):
 
     session = AgentSession(
         stt=deepgram.STT(model="nova-3", language="it-IT"),
-        llm=inference.LLM(
+        llm=openai.LLM(
             model="gpt-5.2-chat-latest",
-            provider="openai",
             api_key=os.getenv("OPENAI_API_KEY")
         ),
         #=openai.LLM.with_x_ai(
