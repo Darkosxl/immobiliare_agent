@@ -36,7 +36,8 @@ from livekit.agents import (
     RunContext,
     cli,
     function_tool,
-    JobProcess
+    JobProcess,
+    WorkerOptions
 )
 from livekit.plugins import groq
 from livekit.plugins import openai, silero, google as lk_google, deepgram, noise_cancellation, elevenlabs
