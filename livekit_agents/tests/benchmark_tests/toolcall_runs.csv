@@ -1,6 +1,0 @@
-Model,Run,TTFT,Tool Called,Tool Name,Status
-openai/gpt-5.2,1,1.4630809599984786,True,get_apartment_info,SUCCESS
-openai/gpt-5.2,2,0.5981747709993215,True,get_apartment_info,SUCCESS
-openai/gpt-5.2,3,1.1793549160029215,True,get_apartment_info,SUCCESS
-openai/gpt-5.2,4,8.13415218999944,True,get_apartment_info,SUCCESS
-openai/gpt-5.2,5,3.251758747999702,True,get_apartment_info,SUCCESS
