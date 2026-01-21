@@ -125,6 +125,12 @@ server.setup_fnc = prewarm
 
 @server.rtc_session()
 async def entrypoint(ctx: JobContext):
+    voice_settings = elevenlabs.VoiceSettings(
+        speed=1.11,
+        stability=0.76,
+        style=0.5,
+        similarity_boost=0.5
+    )
     ctx.log_context_fields = {
         "room": ctx.room.name,
     }
@@ -142,7 +148,8 @@ async def entrypoint(ctx: JobContext):
         tts=elevenlabs.TTS(
             voice_id="gfKKsLN1k0oYYN9n2dXX",#violetta
             model="eleven_multilingual_v2",
-            api_key=os.getenv("ELEVENLABS_API_KEY")
+            api_key=os.getenv("ELEVENLABS_API_KEY"),
+            voice_settings=voice_settings
         )
         #lk_google.TTS(
         #    gender="female",

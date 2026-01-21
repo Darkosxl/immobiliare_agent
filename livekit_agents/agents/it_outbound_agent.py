@@ -66,7 +66,12 @@ class RealEstateItalianOutboundAgent(Agent):
 async def entrypoint(ctx: JobContext):
 
     await ctx.connect()
-
+    voice_settings = elevenlabs.VoiceSettings(
+        speed=1.14,
+        stability=0.39,
+        style=0.55,
+        similarity_boost=0.65
+    )
     ctx.log_context_fields = {
         "room": ctx.room.name,
     }
@@ -83,7 +88,8 @@ async def entrypoint(ctx: JobContext):
         tts=elevenlabs.TTS(
             voice_id="W71zT1VwIFFx3mMGH2uZ",
             model="eleven_multilingual_v2",
-            api_key=os.getenv("ELEVENLABS_API_KEY")
+            api_key=os.getenv("ELEVENLABS_API_KEY"),
+            voice_settings=voice_settings
         ),
         turn_detection=MultilingualModel(),
         vad=silero.VAD.load(),
