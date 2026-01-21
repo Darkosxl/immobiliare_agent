@@ -1,3 +1,22 @@
+I need to clean this up for myself, hopefully it's easier for you too
+
+livekit_agents: implementation of inbound and outbound livekit agents:
+ /agents: orchestration implementation
+ /prompts: system prompts
+ /tests: involves unit tests, and benchmarks for speed and tool callings
+ /tools: any systematic tools that have been deployed
+ /tasks: to be used, this is the second type of voiceai implementation that has a task driven identity
+ 
+
+
+
+
+
+
+
+
+
+
 
 
 there are two different types of reaching out:
