@@ -214,6 +214,14 @@ Output only the listing name(s), nothing else."""
     # Sort by distance and get top 3
     top3 = sorted(listings, key=lambda x: x['distance_km'])[:3]
 
+    # No listings with coordinates found for this filter
+    if not top3:
+        tipo = "in affitto" if listing_type == "rent" else "in vendita"
+        return json.dumps({
+            "status": "no_nearby",
+            "message": f"Non ho trovato immobili {tipo} in zona {zone}. Vuole che cerchi in un'altra zona?"
+        })
+
     # Return raw data - let LLM decide how to present it
     return json.dumps({
         "status": "found_nearby" if top3[0]['distance_km'] >= 0.1 else "exact_match",
