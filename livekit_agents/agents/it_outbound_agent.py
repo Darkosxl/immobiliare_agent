@@ -9,6 +9,7 @@ from livekit.agents import (
     Agent,
     AgentSession,
     JobContext,
+    JobProcess,
     cli,
     inference,
     WorkerOptions,
@@ -32,6 +33,10 @@ logger.setLevel(logging.INFO)
 load_dotenv(".env")
 
 OUTBOUND_TRUNK_ID = os.getenv("OUTBOUND_TRUNK_ID")
+
+
+def prewarm(proc: JobProcess):
+    proc.userdata["vad"] = silero.VAD.load()
 
 
 class RealEstateItalianOutboundAgent(Agent):
@@ -97,7 +102,7 @@ async def entrypoint(ctx: JobContext):
             voice_settings=voice_settings
         ),
         turn_detection=MultilingualModel(),
-        vad=silero.VAD.load(),
+        vad=ctx.proc.userdata["vad"],
         preemptive_generation=True,
         resume_false_interruption=True,
         false_interruption_timeout=1.0,
@@ -136,6 +141,7 @@ if __name__ == "__main__":
     cli.run_app(
         WorkerOptions(
             entrypoint_fnc=entrypoint,
+            prewarm_fnc=prewarm,
             agent_name="RealEstate-Outbound-Agent"
         )
     )

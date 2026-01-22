@@ -13,7 +13,7 @@ load_dotenv()
 async def main():
     lk = api.LiveKitAPI()
     
-    phone_to_call = os.environ.get("OUTBOUND_PHONE_NUMBER", "+39XXXXXXXXX")
+    phone_to_call = os.environ.get("OUTBOUND_PHONEar_NUMBER", "+39XXXXXXXXX")
     room_name = f"sip_room_1_{phone_to_call[-4:]}_{int(time.time())}"
 
     # 1. Create room with phone number in metadata

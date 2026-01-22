@@ -122,8 +122,6 @@ server = AgentServer()
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
 
-server.setup_fnc = prewarm
-
 @server.rtc_session()
 async def entrypoint(ctx: JobContext):
     voice_settings = elevenlabs.VoiceSettings(
@@ -199,6 +197,7 @@ if __name__ == "__main__":
     cli.run_app(
         WorkerOptions(
             entrypoint_fnc=entrypoint,
+            prewarm_fnc=prewarm,
             agent_name="RealEstate-Inbound-Agent"
         )
     )
